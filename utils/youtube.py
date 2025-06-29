@@ -118,8 +118,8 @@ def download_youtube_content(
 def download_youtube_audio_or_transcript(
     video_url: str,
     preferred_output: Literal['audio', 'transcript', 'both'] = 'transcript',
-    cache_dir: str = 'cache/youtube/cache',
-    output_dir: str = 'cache/youtube/downloads',
+    cache_dir: str = 'test_data/cache/youtube/cache',
+    output_dir: str = 'test_data/cache/youtube/downloads',
     use_cache: bool = True,
 ) -> YTContentData:
     
