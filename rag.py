@@ -1,7 +1,6 @@
-# from langchain_ollama import OllamaEmbeddings
+from langchain_ollama import OllamaEmbeddings, ChatOllama
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
-from langchain.chat_models import init_chat_model
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from qdrant_client import QdrantClient
@@ -10,7 +9,14 @@ from langchain_qdrant import QdrantVectorStore
 
 import os
 from loguru import logger
-from typing import Any, List, Dict
+from typing import Any, List, Dict, Optional, Union
+
+from pydantic import BaseModel
+from langchain_core.embeddings import Embeddings
+
+from langchain_core.prompts import PromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.language_models.chat_models import BaseChatModel
 
 
 class TextDocumentRAG:
@@ -19,11 +25,20 @@ class TextDocumentRAG:
     path_on_disk: str = "test_data/qdrant_vector_store"
     collection_path_on_disk: str = "test_data/qdrant_vector_store/collection"
     collection_name: str = "text-document-rag"
+    collection_exists: bool = False
 
-    def __init__(self) -> None:
+    def __init__(self, embedding_model: Optional[Union[BaseModel, Embeddings]] = None) -> None:
+        self.load_embedding_model(embedding_model)
+        self.init_vector_store()
+
+    def load_embedding_model(self, embedding_model: Optional[Union[BaseModel, Embeddings]] = None) -> None:
         # self._embeddings = OllamaEmbeddings(model=self.embedding_model_name)
-        self._embeddings = HuggingFaceEmbeddings(model=self.embedding_model_name)
-
+        self._embeddings = (
+            embedding_model if embedding_model
+            else HuggingFaceEmbeddings(model=self.embedding_model_name)
+        )
+    
+    def init_vector_store(self) -> None:
         if os.path.exists(
             os.path.join(self.collection_path_on_disk, self.collection_name)
         ):
@@ -33,6 +48,7 @@ class TextDocumentRAG:
                 embedding=self._embeddings,
                 path=self.path_on_disk
             )
+            self.collection_exists = True
         else:
             logger.debug("Creaing Client...")
             self._client = QdrantClient(path=self.path_on_disk)
@@ -49,13 +65,19 @@ class TextDocumentRAG:
             )
 
         self.retriever = self._vector_store.as_retriever()
-
     
     def add_documents(self, 
         documents: List[Document], 
         split_text: bool = False, 
         split_config: Dict[str, Any] = {},
+        skip_if_collection_exists: bool = True,
     ) -> None:
+        
+        if skip_if_collection_exists and self.collection_exists:
+            logger.warning(
+                "Collection exists, so NOT ADDING documents." \
+                "To override this behaviour, set `skip_if_collection_exists` parameter to `False`.")
+            return
         
         if split_text:
             logger.info("Splitting text...")
@@ -64,3 +86,34 @@ class TextDocumentRAG:
         
         logger.info("Adding documents...")
         self._vector_store.add_documents(documents)
+    
+    def generate_answer(self, 
+        query: str, llm: BaseChatModel,
+        retrieved_docs: List[Document]
+    ) -> None:
+        
+        document_context = "\n\n".join(
+            f"Document #{i + 1}\n" + document.page_content
+            for i, document in enumerate(retrieved_docs)
+        )
+
+# Relevant Questions: {matched_questions}
+        template = PromptTemplate.from_template(
+            template="""Using the provided context and associated questions, give a clear, engaging, and direct answer to the user's question in a conversational tone. Speak directly to the user, use active voice, and focus on the key information from the context that best matches the query. If the context or questions don't fully address the query, briefly acknowledge this and provide the most relevant information available.
+
+Context: {context}
+
+Question: {query}
+
+Answer:
+"""
+        )
+
+        chain = (
+            {"query": lambda x: x["query"], "context": lambda _: document_context}
+            | template
+            | llm
+        )
+
+        return chain.invoke({ "query": query })
+

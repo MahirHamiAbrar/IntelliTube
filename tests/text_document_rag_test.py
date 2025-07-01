@@ -1,11 +1,14 @@
+from pprint import pprint
 from langchain_core.documents import Document
 from intellitube.rag import TextDocumentRAG
 from intellitube.utils import (
     YTContentData, 
     download_youtube_audio_or_transcript,
-    webvtt_2_json, webvtt_2_langchain_documents
+    webvtt_2_json, webvtt_2_langchain_documents, webvtt_2_str
 )
 from typing import List
+
+from langchain.chat_models import init_chat_model
 
 
 def get_transcript_as_documents() -> List[Document]:
@@ -16,20 +19,42 @@ def get_transcript_as_documents() -> List[Document]:
     )
     print("Downloaded Data: ", data, end='\n\n')
 
-    return webvtt_2_langchain_documents(vtt_file_path=data.transcript_path)
+    # return webvtt_2_langchain_documents(vtt_file_path=data.transcript_path)
+
+    return Document(
+        page_content=webvtt_2_str(vtt_file_path=data.transcript_path),
+        metadata={
+            "source": url
+        }
+    )
 
 
 if __name__ == "__main__":
     documents = get_transcript_as_documents()
+    # llm = init_chat_model(model="llama3.2:3b", model_provider="ollama", temperature=0)
+    llm = init_chat_model(model="granite3.3:8b", model_provider="ollama", temperature=0)
+    
+    # pprint(documents.page_content)
+    # exit(0)
 
     tdr = TextDocumentRAG()
     tdr.add_documents(
-        documents, split_text=True,
+        [documents], split_text=True,
         split_config={
-            "chunk_size": 1024,
-            "chunk_overlap": 256
-        }
+            "chunk_size": 512,
+            "chunk_overlap": 128
+        },
+        skip_if_collection_exists=True,
     )
 
-    docs = tdr.retriever.invoke("who am I?", k=5)
+    # query = "What is a weird job?"
+    # query = "What is not a good advice?"
+    query = "What is a bad advice?"
+
+    # docs = tdr.retriever.invoke("Why was President Nempahrd thanked?", k=5)
+    docs = tdr.retriever.invoke(query, k=5)
     print(docs)
+
+    answer = tdr.generate_answer(query, llm, docs)
+    print(f"\n\n{answer = }")
+    print(f"\n\n{answer.content}")

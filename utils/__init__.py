@@ -8,4 +8,5 @@ from .youtube import (
 from .video_transcript import (
     webvtt_2_json,
     webvtt_2_langchain_documents,
+    webvtt_2_str,
 )

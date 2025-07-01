@@ -119,3 +119,37 @@ def webvtt_2_langchain_documents(
         ))
     
     return documents
+
+
+def webvtt_2_str(
+    vtt_content: Optional[Union[str, dict]] = None,
+    vtt_file_path: Optional[str] = None,
+    include_timestamps: bool = False,
+) -> str:
+    """Converts WEBVTT file/content to a single string.
+
+    Args:
+        vtt_content (Optional[Union[str, dict]], optional): WEBVTT File content as a `str` or a `dict`. Defaults to None.
+        vtt_file_path (Optional[str], optional): WEBVTT file path. Defaults to None.
+
+    Returns:
+        str: a string
+    """
+    
+    vtt_json: dict
+
+    if type(vtt_content) == dict:
+        vtt_json = vtt_content
+    else:
+        vtt_json = webvtt_2_json(vtt_content, vtt_file_path)
+    
+    vtt_str = "\n".join(
+        (
+            "" if not include_timestamps
+            else f'From {caption["start"]} to {caption["end"]}: '
+        ) + caption['text']
+        
+        for caption in vtt_json["captions"]
+    )
+
+    return vtt_str
