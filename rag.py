@@ -27,6 +27,10 @@ class TextDocumentRAG:
     collection_name: str = "text-document-rag"
     collection_exists: bool = False
 
+    @property
+    def vectorstore(self) -> QdrantVectorStore:
+        return self._vector_store
+
     def __init__(self, embedding_model: Optional[Union[BaseModel, Embeddings]] = None) -> None:
         self.load_embedding_model(embedding_model)
         self.init_vector_store()
