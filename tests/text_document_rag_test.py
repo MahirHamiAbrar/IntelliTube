@@ -47,10 +47,10 @@ if __name__ == "__main__":
         },
         skip_if_collection_exists=True,
     )
-
-    query = "Who am I?"
+ 
+    # query = "Who am I?"
     # query = "Who is the author?"
-    # query = "What is a weird job?"
+    query = "What is a weird job?"
     # query = "What is not a good advice?"
     # query = "What is a bad advice?"
     
@@ -59,13 +59,13 @@ if __name__ == "__main__":
         search_kwargs={'score_threshold': 0.6}
     )
 
-    docs = tdr.vectorstore.similarity_search_with_relevance_scores(
-        query=query,
-        k = 5,
-    )
+    # docs = tdr.vectorstore.similarity_search_with_relevance_scores(
+    #     query=query,
+    #     k = 5,
+    # )
 
     # docs = tdr.retriever.invoke("Why was President Nempahrd thanked?", k=5)
-    # docs = tdr.retriever.invoke(query, k=5)
+    docs = tdr.retriever.invoke(query, k=5)
     pprint(docs)
 
     # answer = tdr.generate_answer(query, llm, docs)

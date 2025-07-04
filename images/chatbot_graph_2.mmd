@@ -1,0 +1,27 @@
+%%{init: {
+      "theme": "dark",
+      "themeVariables": {
+        "fontFamily": "Fira Code, monospace",
+        "primaryColor": "#1e1e2e",
+        "edgeLabelBackground": "#2e2e3e",
+        "primaryTextColor": "#cdd6f4",
+        "secondaryTextColor": "#89b4fa",
+        "tertiaryColor": "#45475a",
+        "nodeBorder": "#f38ba8",
+        "lineColor": "#f38ba8"
+      }
+    }}%%
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	generate_response(generate_response)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> generate_response;
+	generate_response --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc
