@@ -112,7 +112,7 @@ class ChatHistoryManager:
         # create the folders
         self._chat_folder_location = os.path.join(self.save_dir, self._chats_dir, chat_id)
         self._chat_file_location = os.path.join(self._chat_folder_location, self._chat_fname)
-        os.mkdirs(self._chat_folder_location, exist_ok=True)
+        os.makedirs(self._chat_folder_location, exist_ok=True)
     
     def vdb_exists(self) -> bool:
         pass
@@ -145,17 +145,3 @@ class ChatHistoryManager:
     
     def add_message(self, message: BaseMessage) -> None:
         self._chat.messages.append(message)
-
-
-if __name__ == '__main__':
-    from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
-
-    # chm = ChatHistoryManager.new_chat()
-    chm = ChatHistoryManager.from_chat_history(chat_id="0c476182-7126-497d-bfa3-14ad686ad26d")
-    print("Chat ID:", chm.chat_id)
-    # chm.add_message(HumanMessage("Hi!"))
-    # chm.add_message(AIMessage("Hello there! How can I assist you?"))
-    chm.add_message(ToolMessage(content="This is a tool message", tool_call_id=chm.chat_id))
-    chm.close_chat()
-    # print(chm.chat.model_dump())
-    # print(chm.chat_messages)
