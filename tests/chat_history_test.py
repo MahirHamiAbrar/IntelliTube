@@ -6,16 +6,16 @@ def new_chat_test() -> None:
 
     chm = ChatHistoryManager.new_chat()
     print("Chat ID:", chm._chat_id)
-    # chm.add_message(HumanMessage("Hi!"))
-    # chm.add_message(AIMessage("Hello there! How can I assist you?"))
-    # chm.close_chat()
+    chm.add_message(HumanMessage("Hi!"))
+    chm.add_message(AIMessage("Hello there! How can I assist you?"))
+    chm.close_chat()
     print(chm.chatlist)
 
 
 def load_existing_chat_test() -> None:
     from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
     
-    chat_id = "62dc2f34-4956-4b13-91e8-fe192b97e067"
+    chat_id = "95c6a153-f7eb-4e22-a075-0e24f18c5b44"
     
     chm = ChatHistoryManager.from_chat_history(chat_id=chat_id)
     print("Chat ID:", chm.chat_id)
@@ -27,6 +27,6 @@ if __name__ == '__main__':
     run_test = lambda test_no: [
         new_chat_test,
         load_existing_chat_test
-    ][test_no - 1].__call__()
+    ][test_no - 2].__call__()
 
-    run_test(test_no=2)
+    run_test(test_no=1)
