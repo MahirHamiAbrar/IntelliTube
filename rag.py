@@ -1,4 +1,4 @@
-from langchain_ollama import OllamaEmbeddings, ChatOllama
+# from langchain_ollama import OllamaEmbeddings, ChatOllama
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
