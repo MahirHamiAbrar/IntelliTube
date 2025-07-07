@@ -31,7 +31,16 @@ class TextDocumentRAG:
     def vectorstore(self) -> QdrantVectorStore:
         return self._vector_store
 
-    def __init__(self, embedding_model: Optional[Union[BaseModel, Embeddings]] = None) -> None:
+    def __init__(self,
+        embedding_model: Optional[Union[BaseModel, Embeddings]] = None,
+        path_on_disk: Optional[str] = None,
+        collection_path_on_disk: Optional[str] = None,
+        collection_name: Optional[str] = None,
+    ) -> None:
+        self.path_on_disk = path_on_disk or self.path_on_disk
+        self.collection_path_on_disk = collection_path_on_disk or self.collection_path_on_disk
+        self.collection_name = collection_name or self.collection_name
+        
         self.load_embedding_model(embedding_model)
         self.init_vector_store()
 
