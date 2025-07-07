@@ -10,3 +10,8 @@ from .video_transcript import (
     webvtt_2_langchain_documents,
     webvtt_2_str,
 )
+from .chat_history import (
+    ChatInfo,
+    Chat,
+    ChatHistoryManager,
+)

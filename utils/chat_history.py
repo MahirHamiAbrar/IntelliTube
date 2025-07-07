@@ -4,7 +4,7 @@ import json
 import uuid
 from datetime import datetime
 from loguru import logger
-from typing import List, Dict, Self, TypedDict, Optional
+from typing_extensions import List, Dict, Self, TypedDict, Optional
 
 from pydantic import BaseModel
 from langchain_core.messages import BaseMessage
@@ -110,7 +110,7 @@ class ChatHistoryManager:
             raise ValueError(f"Given chat_id={_manager.chat_id} already exists. Please provide an unique chat id.")
 
         # create the folers
-        os.makedirs(_manager._chat_dirpath, exist_ok=True)
+        os.makedirs(_manager.chat_dirpath, exist_ok=True)
         
         _dt_now_ts = datetime.timestamp(datetime.now())
         _manager.chatlist[_manager.chat_id] = ChatInfo(
