@@ -2,9 +2,9 @@
 import os
 import json
 import uuid
-from datetime import datetime
 from loguru import logger
-from typing_extensions import List, Dict, Self, TypedDict, Optional
+from datetime import datetime
+from typing_extensions import List, Dict, TypedDict, Optional
 
 from pydantic import BaseModel
 from langchain_core.messages import BaseMessage
@@ -103,7 +103,7 @@ class ChatHistoryManager:
         return self._chat.messages
     
     @staticmethod
-    def new_chat(chat_id: Optional[str] = None, root_dir: Optional[str] = None) -> Self:
+    def new_chat(chat_id: Optional[str] = None, root_dir: Optional[str] = None) -> 'ChatHistoryManager':
         _manager = ChatHistoryManager(root_dir, chat_id=chat_id)
 
         if _manager.chatlist.get(_manager.chat_id, None):
@@ -122,7 +122,7 @@ class ChatHistoryManager:
         return _manager
     
     @staticmethod
-    def from_chat_history(chat_id: str) -> Self:
+    def from_chat_history(chat_id: str) -> 'ChatHistoryManager':
         _manager = ChatHistoryManager(chat_id=chat_id)
         _chatlist = _manager.chatlist
         
