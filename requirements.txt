@@ -4,6 +4,7 @@ langchain_community
 
 # LangChain LLM Service Provider modules
 langchain-groq
+langchain-openai
 langchain-ollama
 langchain-google-genai
 langchain-nvidia-ai-endpoints
@@ -16,7 +17,8 @@ langchain-qdrant
 langgraph
 
 # Others
-sentence-transformers
-typing_extensions
+dotenv
 loguru
+typing_extensions
+sentence-transformers
 yt_dlp
