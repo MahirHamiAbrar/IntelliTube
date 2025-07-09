@@ -102,6 +102,10 @@ class ChatHistoryManager:
     def chat_messages(self) -> List[BaseMessage]:
         return self._chat.messages
     
+    @chat_messages.setter
+    def chat_messages(self, messages: List[BaseMessage]) -> None:
+        self._chat.messages = messages
+    
     @staticmethod
     def new_chat(chat_id: Optional[str] = None, root_dir: Optional[str] = None) -> 'ChatHistoryManager':
         _manager = ChatHistoryManager(root_dir, chat_id=chat_id)
@@ -169,7 +173,7 @@ class ChatHistoryManager:
         with open(self.get_chat_dirpath(self._chat_id), 'w') as chat_file:
             json.dump(self._chat.model_dump(), chat_file, indent=indent)
     
-    def close_chat(self) -> None:
+    def end_chat(self) -> None:
         self.save_chat()
         self.save_chatlist()
     
