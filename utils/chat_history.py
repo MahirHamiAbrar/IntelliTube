@@ -190,7 +190,7 @@ class ChatHistoryManager:
     
     def remove_unlisted_chats(self, excluded_ids: Optional[List[str]] = None) -> None:
         """Remove the chats that are not in the `chatlist.json`.
-
+        
         Args:
             excluded_ids (Optional[List[str]], optional): List of ids to exclude that are not in `chatlist.json`. Defaults to None.
         """
@@ -199,8 +199,13 @@ class ChatHistoryManager:
         chat_ids = set(os.listdir(chats_dirpath))
         excluded_ids = set((excluded_ids or []) + [self.chat_id] + list(self.chatlist.keys()))
 
-        print(chat_ids)
+        # print(chat_ids)
 
         for chat_id in list((chat_ids - excluded_ids) | (excluded_ids - chat_ids)):
             logger.warning(f"Removing Unlisted Chat: {chat_id}")
-            shutil.rmtree(os.path.join(chats_dirpath, chat_id))
+            path = os.path.join(chats_dirpath, chat_id)
+            # Failsafe: what if the path does not exist?
+            if not os.path.exists(path):
+                logger.error(f"Chat: {chat_id} is non-existent!")
+                continue
+            shutil.rmtree(path)
