@@ -2,6 +2,7 @@
 import os
 import json
 import uuid
+import shutil
 from loguru import logger
 from datetime import datetime
 from typing_extensions import List, Dict, TypedDict, Optional
@@ -26,7 +27,7 @@ class ChatHistoryManager:
     _chat_id: str = ""
     
     _chat_filename: str = "chat_messages.json"
-    _chatlist_filename: str = "chat_list.json"
+    _chatlist_filename: str = "chatlist.json"
     _chatlist_filepath: str = None
     
     _chat_dirpath: str = None
@@ -178,13 +179,28 @@ class ChatHistoryManager:
         self.save_chatlist()
     
     def delete_current_chat(self) -> None:
-        import shutil
         shutil.rmtree(self.chat_dirpath)
     
     def delete_chat(self, chat_id: str) -> None:
         """Raises `FileNotFoundError` if the chat folder does not exist."""
-        import shutil
         shutil.rmtree(self.get_chat_dirpath(chat_id))
     
     def add_message(self, message: BaseMessage) -> None:
         self._chat.messages.append(message)
+    
+    def remove_unlisted_chats(self, excluded_ids: Optional[List[str]] = None) -> None:
+        """Remove the chats that are not in the `chatlist.json`.
+
+        Args:
+            excluded_ids (Optional[List[str]], optional): List of ids to exclude that are not in `chatlist.json`. Defaults to None.
+        """
+        
+        chats_dirpath = os.path.join(self.root_dir, self.chats_dir)
+        chat_ids = set(os.listdir(chats_dirpath))
+        excluded_ids = set((excluded_ids or []) + [self.chat_id] + list(self.chatlist.keys()))
+
+        print(chat_ids)
+
+        for chat_id in list((chat_ids - excluded_ids) | (excluded_ids - chat_ids)):
+            logger.warning(f"Removing Unlisted Chat: {chat_id}")
+            shutil.rmtree(os.path.join(chats_dirpath, chat_id))
