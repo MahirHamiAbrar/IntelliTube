@@ -202,10 +202,13 @@ class ChatHistoryManager:
         # print(chat_ids)
 
         for chat_id in list((chat_ids - excluded_ids) | (excluded_ids - chat_ids)):
-            logger.warning(f"Removing Unlisted Chat: {chat_id}")
-            path = os.path.join(chats_dirpath, chat_id)
-            # Failsafe: what if the path does not exist?
-            if not os.path.exists(path):
-                logger.error(f"Chat: {chat_id} is non-existent!")
-                continue
-            shutil.rmtree(path)
+            try:
+                logger.warning(f"Removing Unlisted Chat: {chat_id}")
+                path = os.path.join(chats_dirpath, chat_id)
+                # Failsafe: what if the path does not exist?
+                if not os.path.exists(path):
+                    logger.error(f"Chat: {chat_id} is non-existent!")
+                    continue
+                shutil.rmtree(path)
+            except OSError as e:
+                logger.error(str(e))
