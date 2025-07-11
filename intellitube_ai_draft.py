@@ -17,7 +17,9 @@ from intellitube.llm import init_llm
 from intellitube.utils import ChatManager
 from intellitube.rag import TextDocumentRAG
 from intellitube.tools import document_loader_tools
-from intellitube.prompts import router_agent_prompts
+from intellitube.prompts import (
+    router_agent_prompts, chat_agent_prompts
+)
 
 
 # initialize chat manager (new chat)
@@ -88,7 +90,7 @@ class AgentState(TypedDict):
 def router_agent_node(state: AgentState) -> AgentState:
     structured_llm = llm.with_structured_output(RouterAgentResponse)
     messages = ChatPromptTemplate.from_messages(
-        [router_agent_prompts.system_prompt, *state["messages"][-1]]
+        [router_agent_prompts.system_prompt, state["messages"][-1]]
     )
     agent_resp: RouterAgentResponse = structured_llm.invoke(messages)
     return {"messages": [HumanMessage(agent_resp.user_query)], "router_response": agent_resp}
@@ -111,8 +113,28 @@ RETRIEVER = document_rag.vectorstore.as_retriever(
     search_kwargs={'score_threshold': 0.6}
 )
 
+# document retriever node
 def document_retriever_node(state: AgentState) -> AgentState:
     state["retrieved_docs"] = RETRIEVER.invoke(state["router_response"].user_query)
     print("\n\n\n")
     print(state["retrieved_docs"], end='\n\n')
     return state
+
+# Chat Agent Node
+def chat_agent_node(state: AgentState) -> AgentState:
+    """A Chat Agent"""
+    docs = (
+        "\n\n".join(f"Source #{i + 1}: {document.page_content}" for i, document in enumerate(state["retrieved_docs"]))
+        if state.get("retrieved_docs") else ""
+    )
+    context = '\n' + docs if docs else '[No Context Available.]'
+    context_source = f" from {state['router_response'].url} {state['router_response'].url_of}"
+    
+    messages = ChatPromptTemplate.from_messages(
+        [chat_agent_prompts.system_prompt.format(
+            context=context, context_source=context_source
+        ), *state["messages"]]
+    )
+    ai_msg: AIMessage = llm.invoke(messages)
+    # return None to reset every other variable except "messages"
+    return {"messages": [ai_msg], "retrieved_docs": None, "router_response": None}
