@@ -2,13 +2,13 @@ import os
 from loguru import logger
 from pydantic import BaseModel, Field
 from typing_extensions import (
-    Annotated, Sequence, List, Literal, TypedDict, Optional
+    Annotated, List, Literal, Sequence, TypedDict, Optional
 )
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
 from langchain_core.messages import (
-    AIMessage, SystemMessage, HumanMessage, ToolMessage, BaseMessage
+    AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 )
 
 from langgraph.graph.message import add_messages
@@ -19,7 +19,7 @@ from intellitube.utils import ChatManager
 from intellitube.rag import TextDocumentRAG
 from intellitube.tools import document_loader_tools
 from intellitube.prompts import (
-    router_agent_prompts, chat_agent_prompts
+    chat_agent_prompts, router_agent_prompts
 )
 
 
@@ -93,7 +93,9 @@ def router_agent_node(state: AgentState) -> AgentState:
     messages = ChatPromptTemplate.from_messages(
         [router_agent_prompts.system_prompt, state["messages"][-1]]
     )
-    agent_resp: RouterAgentResponse = structured_llm.invoke(messages)
+    agent_resp: RouterAgentResponse = structured_llm.invoke(
+        messages.format_messages()
+    )
     return {"messages": [HumanMessage(agent_resp.user_query)], "router_response": agent_resp}
 
 # query router node
@@ -132,11 +134,11 @@ def chat_agent_node(state: AgentState) -> AgentState:
     context_source = f" from {state['router_response'].url} {state['router_response'].url_of}"
     
     messages = ChatPromptTemplate.from_messages(
-        [chat_agent_prompts.system_prompt.format(
-            context=context, context_source=context_source
-        ), *state["messages"]]
+        [chat_agent_prompts.system_prompt, *state["messages"]]
     )
-    ai_msg: AIMessage = llm.invoke(messages)
+    ai_msg: AIMessage = llm.invoke(messages.format_messages(
+        context=context, context_source=context_source
+    ))
     # return None to reset every other variable except "messages"
     return {"messages": [ai_msg], "retrieved_docs": None, "router_response": None}
 
@@ -182,3 +184,24 @@ agent = graph.compile()
 agent.get_graph().draw_png(
     output_file_path=os.path.join(chat_manager.chat_dirpath, "agent_graph.png")
 )
+
+# the chat function
+def chat_loop() -> None:
+    print(f"Chat ID: {chat_manager.chat_id}")
+    usr_msg: str = input(">> ").strip()
+
+    while usr_msg.lower() != "/exit":
+        usr_msg = HumanMessage(usr_msg)
+        chat_manager.add_message(usr_msg)
+        chat_manager.chat_messages = agent.invoke({"messages": chat_manager.chat_messages})["messages"]
+        # for update in agent.stream({"messages": chat.chat_messages}, stream_mode="updates"):
+            # print(update)
+        ai_msg: AIMessage = chat_manager.chat_messages[-1]
+        ai_msg.pretty_print()
+        usr_msg: str = input(">> ").strip()
+    chat_manager.end_chat()
+    chat_manager.remove_unlisted_chats()
+
+
+if __name__ == '__main__':
+    chat_loop()
