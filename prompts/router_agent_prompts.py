@@ -1,6 +1,6 @@
 from langchain_core.messages import SystemMessage
 
-system_message = SystemMessage("""
+system_prompt = SystemMessage("""
 You are an extraction agent. Your task is to return a JSON response in this exact format:
 
 {

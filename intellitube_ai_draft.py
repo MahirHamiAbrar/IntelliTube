@@ -16,6 +16,7 @@ from intellitube.llm import init_llm
 from intellitube.utils import ChatManager
 from intellitube.rag import TextDocumentRAG
 from intellitube.tools import document_loader_tools
+from intellitube.prompts import router_agent_prompts
 
 
 # initialize chat manager (new chat)
@@ -80,3 +81,36 @@ class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
     router_response: Optional[RouterAgentResponse] = None
     retrieved_docs: Optional[List[Document]] = None
+
+
+# Router Agent Nodes
+def router_agent_node(state: AgentState) -> AgentState:
+    structured_llm = llm.with_structured_output(RouterAgentResponse)
+    agent_resp: RouterAgentResponse = structured_llm.invoke(
+        [router_agent_prompts.system_prompt, state["messages"][-1]]
+    ) 
+    return {"messages": [HumanMessage(agent_resp.user_query)], "router_response": agent_resp}
+
+# query router node
+def query_router_node(state: AgentState) -> Literal["use_loader", "use_retriever"]:
+    return "use_retriever" if not state["router_response"].url_of else "use_loader"
+
+# document loader node
+def document_loader_node(state: AgentState) -> Literal["success", "fail"]:
+    logger.info(f'{state["router_response"] = }')
+    loader_func = document_loader_functions.get(state["router_response"].url_of)
+    logger.info(f"{loader_func = }")
+    status = loader_func(state["router_response"].url)
+    return "success" if status else "fail"
+
+# retriever node
+RETRIEVER = document_rag.vectorstore.as_retriever(
+    search_type="similarity_score_threshold",
+    search_kwargs={'score_threshold': 0.6}
+)
+
+def document_retriever_node(state: AgentState) -> AgentState:
+    state["retrieved_docs"] = RETRIEVER.invoke(state["router_response"].user_query)
+    print("\n\n\n")
+    print(state["retrieved_docs"], end='\n\n')
+    return state
