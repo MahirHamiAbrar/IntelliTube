@@ -20,8 +20,9 @@ from langchain_core.language_models.chat_models import BaseChatModel
 
 class TextDocumentRAG:
     # embedding_model_name: str = "bge-m3:567m"
-    # embedding_model_name: str = 'sentence-transformers/all-MiniLM-L12-v2'
-    embedding_model_name: str = 'models/gemini-embedding-exp-03-07'
+    embedding_model_name: str = 'sentence-transformers/all-MiniLM-L12-v2'
+    # embedding_model_name: str = 'models/gemini-embedding-exp-03-07'
+    # embedding_model_name: str = 'jinaai/jina-embeddings-v3'
     path_on_disk: str = "test_data/qdrant_vector_store"
     collection_path_on_disk: str = "test_data/qdrant_vector_store/collection"
     collection_name: str = "text-document-rag"
@@ -46,15 +47,16 @@ class TextDocumentRAG:
 
     def load_embedding_model(self, embedding_model: Optional[Union[BaseModel, Embeddings]] = None) -> None:
         # self._embeddings = OllamaEmbeddings(model=self.embedding_model_name)
-        if self.embedding_model_name.startswith("sentence-transformers"):
+        if 'gemini' in self.embedding_model_name:
+            from langchain_google_genai import GoogleGenerativeAIEmbeddings
+            self._embeddings = GoogleGenerativeAIEmbeddings(model=self.embedding_model_name)
+        else:
             from langchain_huggingface import HuggingFaceEmbeddings
             self._embeddings = (
                 embedding_model if embedding_model
                 else HuggingFaceEmbeddings(model=self.embedding_model_name)
             )
-        else:
-            from langchain_google_genai import GoogleGenerativeAIEmbeddings
-            self._embeddings = GoogleGenerativeAIEmbeddings(model=self.embedding_model_name)
+            
     
     def init_vector_store(self) -> None:
         if os.path.exists(

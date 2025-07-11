@@ -2,7 +2,7 @@ import os
 from loguru import logger
 from pydantic import BaseModel, Field
 from typing_extensions import (
-    Annotated, List, Literal, Sequence, TypedDict, Optional
+    Annotated, List, Literal, Sequence, TypedDict, Union, Optional
 )
 
 from langchain_core.prompts import ChatPromptTemplate
@@ -107,8 +107,11 @@ def document_loader_node(state: AgentState) -> Literal["success", "fail"]:
     logger.info(f'{state["router_response"] = }')
     loader_func = document_loader_functions.get(state["router_response"].url_of)
     logger.info(f"{loader_func = }")
-    status = loader_func(state["router_response"].url)
-    return "success" if status else "fail"
+    documents: Union[Exception, List[Document]] = loader_func(state["router_response"].url)
+    if type(documents) == Exception:
+        return "fail"
+    add_to_vdb(documents)
+    return "success"
 
 # retriever node
 RETRIEVER = document_rag.vectorstore.as_retriever(
