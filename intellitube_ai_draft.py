@@ -145,7 +145,7 @@ def chat_agent_node(state: AgentState) -> AgentState:
 
 # Create The AI Agent (Graph)
 def deliver_failed_message_node(state: AgentState) -> AgentState:
-    return {"messages": [ToolMessage(content=f"failed to load {state['router_response'].url}", tool_call_id=chat.chat_id)]}
+    return {"messages": [ToolMessage(content=f"failed to load {state['router_response'].url}", tool_call_id=chat_manager.chat_id)]}
 
 graph = (
     StateGraph(state_schema=AgentState)
