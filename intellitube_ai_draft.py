@@ -4,7 +4,7 @@ from typing import List
 
 from langchain_core.documents import Document
 
-from intellitube.agents import init_llm
+from intellitube.llm import init_llm
 from intellitube.utils import ChatManager
 from intellitube.rag import TextDocumentRAG
 from intellitube.tools import document_loader_tools

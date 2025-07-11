@@ -1,5 +1,5 @@
 import os
-from intellitube.agents.llm import init_llm
+from llm import init_llm
 
 
 class RAGAgent:
