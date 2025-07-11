@@ -5,6 +5,7 @@ from typing_extensions import (
     Annotated, Sequence, List, Literal, TypedDict, Optional
 )
 
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
 from langchain_core.messages import (
     AIMessage, SystemMessage, HumanMessage, ToolMessage, BaseMessage
@@ -86,9 +87,10 @@ class AgentState(TypedDict):
 # Router Agent Nodes
 def router_agent_node(state: AgentState) -> AgentState:
     structured_llm = llm.with_structured_output(RouterAgentResponse)
-    agent_resp: RouterAgentResponse = structured_llm.invoke(
-        [router_agent_prompts.system_prompt, state["messages"][-1]]
-    ) 
+    messages = ChatPromptTemplate.from_messages(
+        [router_agent_prompts.system_prompt, *state["messages"][-1]]
+    )
+    agent_resp: RouterAgentResponse = structured_llm.invoke(messages)
     return {"messages": [HumanMessage(agent_resp.user_query)], "router_response": agent_resp}
 
 # query router node

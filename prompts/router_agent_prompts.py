@@ -1,7 +1,7 @@
-from langchain_core.messages import SystemMessage
+from langchain_core.prompts import SystemMessagePromptTemplate
 
-system_prompt = SystemMessage("""
-You are an extraction agent. Your task is to return a JSON response in this exact format:
+system_prompt = SystemMessagePromptTemplate.from_template(
+"""You are an extraction agent. Your task is to return a JSON response in this exact format:
 
 {
   "user_query": "<EXACT user query WITHOUT any URLs or paths>",
