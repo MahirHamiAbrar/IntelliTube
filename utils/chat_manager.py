@@ -21,7 +21,7 @@ class Chat(BaseModel):
     messages: List[BaseMessage]
 
 
-class ChatHistoryManager:
+class ChatManager:
     _root_dir: str = "test_data/chat_history"
     _chats_dir: str = "chats"   # container of: chat-messages + vector-database
     _chat_id: str = ""
@@ -108,8 +108,8 @@ class ChatHistoryManager:
         self._chat.messages = messages
     
     @staticmethod
-    def new_chat(chat_id: Optional[str] = None, root_dir: Optional[str] = None) -> 'ChatHistoryManager':
-        _manager = ChatHistoryManager(root_dir, chat_id=chat_id)
+    def new_chat(chat_id: Optional[str] = None, root_dir: Optional[str] = None) -> 'ChatManager':
+        _manager = ChatManager(root_dir, chat_id=chat_id)
 
         if _manager.chatlist.get(_manager.chat_id, None):
             raise ValueError(f"Given chat_id={_manager.chat_id} already exists. Please provide an unique chat id.")
@@ -127,8 +127,8 @@ class ChatHistoryManager:
         return _manager
     
     @staticmethod
-    def from_chat_history(chat_id: str) -> 'ChatHistoryManager':
-        _manager = ChatHistoryManager(chat_id=chat_id)
+    def from_chat_history(chat_id: str) -> 'ChatManager':
+        _manager = ChatManager(chat_id=chat_id)
         _chatlist = _manager.chatlist
         
         if not _chatlist.get(_manager.chat_id, None):
