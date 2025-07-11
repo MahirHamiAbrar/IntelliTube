@@ -7,11 +7,15 @@ from langchain_core.documents import Document
 from intellitube.agents import init_llm
 from intellitube.utils import ChatManager
 from intellitube.rag import TextDocumentRAG
+from intellitube.tools import document_loader_tools
 
 
 # initialize chat manager (new chat)
 chat_manager = ChatManager.new_chat()
 logger.debug(f"Chat ID: {chat_manager.chat_id}")
+
+# initialize an LLM
+llm = init_llm(model_provider='google')
 
 
 # initialize rag system
@@ -34,3 +38,10 @@ def add_to_vdb(docuemnts: List[Document]) -> None:
         },
         skip_if_collection_exists=True,
     )
+
+# document loader functions
+document_loader_functions = {
+    "document": document_loader_tools.load_document,
+    "youtube_video": document_loader_tools.load_youtube_transcript,
+    "website": document_loader_tools.load_webpage
+}
