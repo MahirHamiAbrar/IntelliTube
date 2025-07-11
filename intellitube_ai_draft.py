@@ -12,6 +12,7 @@ from langchain_core.messages import (
 )
 
 from langgraph.graph.message import add_messages
+from langgraph.graph import START, END, StateGraph
 
 from intellitube.llm import init_llm
 from intellitube.utils import ChatManager
@@ -138,3 +139,46 @@ def chat_agent_node(state: AgentState) -> AgentState:
     ai_msg: AIMessage = llm.invoke(messages)
     # return None to reset every other variable except "messages"
     return {"messages": [ai_msg], "retrieved_docs": None, "router_response": None}
+
+
+# Create The AI Agent (Graph)
+def deliver_failed_message_node(state: AgentState) -> AgentState:
+    return {"messages": [ToolMessage(content=f"failed to load {state['router_response'].url}", tool_call_id=chat.chat_id)]}
+
+graph = (
+    StateGraph(state_schema=AgentState)
+    .add_node("router_agent", router_agent_node)
+    .add_node("chat_agent", chat_agent_node)
+    .add_node("document_loader", lambda state: state)
+    .add_node("document_retriever", document_retriever_node)
+    .add_node(
+        "deliver_failed_message",
+        deliver_failed_message_node
+    )
+    
+    .add_edge(START, "router_agent")
+    .add_conditional_edges(
+        source="router_agent",
+        path=query_router_node,
+        path_map={
+            "use_loader": "document_loader",
+            "use_retriever": "document_retriever",
+        }
+    )
+    .add_conditional_edges(
+        source="document_loader",
+        path=document_loader_node,
+        path_map={
+            "fail": "deliver_failed_message",
+            "success": "document_retriever",
+        }
+    )
+    .add_edge("deliver_failed_message", "chat_agent")
+    .add_edge("document_retriever", "chat_agent")
+    .add_edge("chat_agent", END)
+)
+
+agent = graph.compile()
+agent.get_graph().draw_png(
+    output_file_path=os.path.join(chat_manager.chat_dirpath, "agent_graph.png")
+)
