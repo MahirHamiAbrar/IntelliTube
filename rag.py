@@ -72,8 +72,9 @@ class TextDocumentRAG:
             self._client = QdrantClient(path=self.path_on_disk)
             self._client.create_collection(
                 collection_name=self.collection_name,
-                # vectors_config=VectorParams(size=1024, distance=Distance.COSINE)
-                vectors_config=VectorParams(size=384, distance=Distance.COSINE)
+                vectors_config=VectorParams(
+                    size=len(self._embeddings.embed_query("hehe")), distance=Distance.COSINE
+                )
             )
             logger.debug("Creaing vector store")
             self._vector_store = QdrantVectorStore(
