@@ -31,6 +31,10 @@ class VectorStoreManager:
     @property
     def vectorstore(self) -> QdrantVectorStore:
         return self._vector_store
+    
+    @property
+    def client(self) -> QdrantClient:
+        return self._client
 
     def __init__(self,
         embedding_model: Optional[Union[BaseModel, Embeddings]] = None,
