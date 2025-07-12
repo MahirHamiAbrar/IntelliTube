@@ -33,4 +33,4 @@ class RAGAgent:
     ) -> None:
         self._llm = llm
         self._chat_manager = chat_manager
-        self._vector_store = 
+        self._vector_store = vector_store
