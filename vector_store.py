@@ -18,7 +18,7 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.language_models.chat_models import BaseChatModel
 
 
-class TextDocumentRAG:
+class VectorStoreManager:
     # embedding_model_name: str = "bge-m3:567m"
     embedding_model_name: str = 'sentence-transformers/all-MiniLM-L12-v2'
     # embedding_model_name: str = 'models/gemini-embedding-exp-03-07'

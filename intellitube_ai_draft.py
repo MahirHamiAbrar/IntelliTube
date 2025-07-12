@@ -16,7 +16,7 @@ from langgraph.graph import START, END, StateGraph
 
 from intellitube.llm import init_llm
 from intellitube.utils import ChatManager
-from intellitube.rag import TextDocumentRAG
+from intellitube.vector_store import VectorStoreManager
 from intellitube.tools import document_loader_tools
 from intellitube.prompts import (
     chat_agent_prompts, router_agent_prompts
@@ -32,7 +32,7 @@ llm = init_llm(model_provider='google')
 
 
 # initialize rag system
-document_rag = TextDocumentRAG(
+document_rag = VectorStoreManager(
     path_on_disk=chat_manager.chat_dirpath,
     collection_path_on_disk=os.path.join(chat_manager.chat_dirpath, "collection"),
     collection_name=chat_manager.chat_id,

@@ -1,6 +1,6 @@
 from pprint import pprint
 from langchain_core.documents import Document
-from intellitube.rag import TextDocumentRAG
+from intellitube.vector_store import VectorStoreManager
 from intellitube.utils import (
     YTContentData, 
     download_youtube_audio_or_transcript,
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     # pprint(documents.page_content)
     # exit(0)
 
-    tdr = TextDocumentRAG()
+    tdr = VectorStoreManager()
     tdr.add_documents(
         [documents], split_text=True,
         split_config={

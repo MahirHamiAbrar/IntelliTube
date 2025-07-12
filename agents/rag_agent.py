@@ -1,9 +1,8 @@
 import os
 from typing_extensions import Optional
 
-from intellitube.llm import init_llm
 from intellitube.utils import ChatManager
-from intellitube.rag import TextDocumentRAG
+from intellitube.vector_store import VectorStoreManager
 
 from langchain_core.language_models import BaseChatModel
 
@@ -13,7 +12,7 @@ from langchain_core.language_models import BaseChatModel
 class RAGAgent:
     _llm: BaseChatModel
     _chat_manager: ChatManager
-    _document_rag: TextDocumentRAG
+    _document_rag: VectorStoreManager
 
     @property
     def llm(self) -> BaseChatModel:
@@ -24,13 +23,13 @@ class RAGAgent:
         return self._chat_manager
     
     @property
-    def document_rag(self) -> TextDocumentRAG:
+    def document_rag(self) -> VectorStoreManager:
         return self._document_rag
 
     def __init__(self,
         llm: BaseChatModel,
         chat_manager: ChatManager,
-        document_rag: TextDocumentRAG
+        document_rag: VectorStoreManager
     ) -> None:
         self._llm = llm
         self._chat_manager = chat_manager

@@ -15,7 +15,7 @@ from langchain.tools import tool
 from langchain.tools.retriever import create_retriever_tool
 
 from langgraph.graph import StateGraph, START, END
-from intellitube.rag import TextDocumentRAG
+from intellitube.vector_store import VectorStoreManager
 from intellitube.summarizer import summarize
 
 
@@ -44,7 +44,7 @@ response_llm = init_chat_model(
 
 
 documents: List[DocumenData] = []  # list of documents (raw document + summary)
-document_rag = TextDocumentRAG()
+document_rag = VectorStoreManager()
 
 
 def add_document(document: Document) -> None:
