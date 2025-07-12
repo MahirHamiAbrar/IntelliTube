@@ -12,7 +12,7 @@ from langchain_core.language_models import BaseChatModel
 class RAGAgent:
     _llm: BaseChatModel
     _chat_manager: ChatManager
-    _document_rag: VectorStoreManager
+    _vector_store: VectorStoreManager
 
     @property
     def llm(self) -> BaseChatModel:
@@ -23,14 +23,14 @@ class RAGAgent:
         return self._chat_manager
     
     @property
-    def document_rag(self) -> VectorStoreManager:
-        return self._document_rag
+    def vectorstore(self) -> VectorStoreManager:
+        return self._vector_store
 
     def __init__(self,
         llm: BaseChatModel,
         chat_manager: ChatManager,
-        document_rag: VectorStoreManager
+        vector_store: VectorStoreManager
     ) -> None:
         self._llm = llm
         self._chat_manager = chat_manager
-        self._document_rag = document_rag
+        self._vector_store = 

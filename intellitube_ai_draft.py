@@ -32,7 +32,7 @@ llm = init_llm(model_provider='google')
 
 
 # initialize rag system
-document_rag = VectorStoreManager(
+vectorstore = VectorStoreManager(
     path_on_disk=chat_manager.chat_dirpath,
     collection_path_on_disk=os.path.join(chat_manager.chat_dirpath, "collection"),
     collection_name=chat_manager.chat_id,
@@ -43,7 +43,7 @@ def add_to_vdb(docuemnts: List[Document]) -> None:
     if type(docuemnts) == Document:
         docuemnts = [docuemnts]
     
-    document_rag.add_documents(
+    vectorstore.add_documents(
         docuemnts, split_text=True,
         split_config={
             "chunk_size": 512,
@@ -114,7 +114,7 @@ def document_loader_node(state: AgentState) -> Literal["success", "fail"]:
     return "success"
 
 # retriever node
-RETRIEVER = document_rag.vectorstore.as_retriever(
+RETRIEVER = vectorstore.vectorstore.as_retriever(
     search_type="similarity_score_threshold",
     search_kwargs={'score_threshold': 0.6}
 )
