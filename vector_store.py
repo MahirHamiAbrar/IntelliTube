@@ -42,11 +42,11 @@ class VectorStoreManager:
     
     @property
     def db_local_path(self) -> Path:
-        return self._db_local_path
+        return Path(self._db_local_path)
     
     @property
     def collection_local_path(self) -> Path:
-        return self._collection_local_path
+        return Path(self._collection_local_path)
     
     @property
     def collection_name(self) -> str:
