@@ -1,10 +1,12 @@
 from pathlib import Path
 from loguru import logger
-from typing_extensions import Optional, Union
+from typing_extensions import Any, List, Dict, Optional, Union
 
 from pydantic import BaseModel
+from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStoreRetriever
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from qdrant_client.http import models
 from qdrant_client import QdrantClient
@@ -122,3 +124,24 @@ class VectorStoreManager:
                 embedding=self.embedding_model
             )
             logger.debug("New Vector Store Created.")
+    
+    def add_documents(self, 
+        documents: List[Document], 
+        split_text: bool = False, 
+        split_config: Dict[str, Any] = {},
+        skip_if_collection_exists: bool = True,
+    ) -> None:
+        
+        if skip_if_collection_exists and self.collection_exists:
+            logger.warning(
+                "Collection exists, so NOT ADDING documents." \
+                "To override this behaviour, set `skip_if_collection_exists` parameter to `False`.")
+            return
+        
+        if split_text:
+            logger.info("Splitting text...")
+            self._text_splitter = RecursiveCharacterTextSplitter(**split_config)
+            documents = self._text_splitter.split_documents(documents)
+        
+        logger.info("Adding documents...")
+        self._vector_store.add_documents(documents)
