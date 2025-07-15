@@ -81,7 +81,7 @@ class SummarizerAgent:
     
     async def generate_summary(self, state: SummaryState) -> Dict[str, List[str]]:
         """Generate summary of a document"""
-        llm_response = await self.map_chain.ainvoke(state['documents'])
+        llm_response = await self.map_chain.ainvoke(state['content'])
         return {"summaries": [llm_response]}
     
     def map_summaries(self, state: AgentState) -> List[Send]:
@@ -103,7 +103,7 @@ class SummarizerAgent:
     async def collapse_summaries(self, state: AgentState) -> Dict[str, list]:
         """Collapse the collected summaries"""
         doc_lists = split_list_of_docs(
-            state["collapsed_summaries"], self.length_function, self.token_max
+            state["collapsed_summaries"], self.length_function, self.max_tokens
         )
         results = []
         for doc_list in doc_lists:
@@ -118,7 +118,7 @@ class SummarizerAgent:
         n_tokens = self.length_function(state["collapsed_summaries"])
         return (
             "collapse_summaries"
-            if n_tokens > self.token_max
+            if n_tokens > self.max_tokens
             else "generate_final_summary"
         )
     
@@ -144,12 +144,3 @@ class SummarizerAgent:
         )
         self._agent = None  # reset the agent variable
         return graph
-
-
-
-if __name__ == '__main__':
-    from intellitube.llm import init_llm
-    llm = init_llm('groq')
-    agent = SummarizerAgent(llm)
-    out = agent.map_chain.invoke({"context": "This is a report about why we breath. We breath because we breath. It is impossible to live without breathing. So, breathing is essential for out life."})
-    print(out)
