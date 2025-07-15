@@ -1,6 +1,6 @@
 import asyncio
 from intellitube.llm import init_llm
-from intellitube.agents.summrizer_agent import SummarizerAgent
+from intellitube.agents import SummarizerAgent
 from intellitube.utils import (
     YTContentData, download_youtube_audio_or_transcript, webvtt_2_str
 )
@@ -33,6 +33,7 @@ async def test_summarizer_agent() -> None:
 
     llm = init_llm('groq')
     summarizer = SummarizerAgent(llm=llm)
+    summarizer.save_graph_image("images/summarizer_agent_graph.png")
 
     last_step = None
     

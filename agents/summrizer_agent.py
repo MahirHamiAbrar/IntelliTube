@@ -1,13 +1,14 @@
 import operator
+from pathlib import Path
 from typing import (
-    Any, Annotated, Dict, List, Literal, Optional, TypedDict
+    Any, Annotated, Dict, List, Literal, Optional, TypedDict, Union
 )
 
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.language_models import BaseChatModel
-from langchain_core.runnables import RunnableSerializable
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnableConfig, RunnableSerializable
 
 from langchain.chains.combine_documents.reduce import (
     acollapse_docs, split_list_of_docs
@@ -144,3 +145,24 @@ class SummarizerAgent:
         )
         self._agent = None  # reset the agent variable
         return graph
+    
+    def save_graph_image(self, path: Union[Path, str]) -> None:
+        if isinstance(path, str):
+            path = Path(path)
+        elif not isinstance(path, Path):
+            raise TypeError(f'Provided "path" is neither a Path() instance nor a str() instance.')
+        
+        mermaid_png = self.agent.get_graph().draw_mermaid_png()
+        path.write_bytes(mermaid_png)
+    
+    def summarize(self,
+        documents: List[Document],
+        config: Optional[RunnableConfig] = None,
+    ) -> SummarizerAgentState:
+        state = SummarizerAgentState(documents=documents)
+        response = self.agent.invoke(
+            # input={"documents": documents},
+            input=state,
+            config=config or {"recursion_limit": 30}
+        )
+        return SummarizerAgentState(**response["generate_final_summary"])
