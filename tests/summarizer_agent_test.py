@@ -1,5 +1,5 @@
 from intellitube.llm import init_llm
-from intellitube.agents import SummarizerAgent
+from intellitube.agents import SummarizerAgent, SummarizerAgentState
 from intellitube.utils import (
     YTContentData, download_youtube_audio_or_transcript, webvtt_2_str
 )
@@ -30,7 +30,7 @@ def test_summarizer_agent() -> None:
         for doc in split_docs
     ]
 
-    llm = init_llm('groq')
+    llm = init_llm('google')
     summarizer = SummarizerAgent(llm=llm)
     summarizer.save_graph_image("images/summarizer_agent_graph.png")
 
@@ -45,8 +45,8 @@ def test_summarizer_agent() -> None:
     
     # print(last_step)
 
-    resp = summarizer.summarize(docs)
-    print(resp)
+    data: SummarizerAgentState = summarizer.summarize(docs)
+    print(data["final_summary"])
 
 
 if __name__ == '__main__':

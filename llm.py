@@ -17,7 +17,7 @@ DEFAULT_MODELS = {
     'openai': "gpt-4o-mini",
     'groq': "llama-3.3-70b-versatile",
     'nvidia': "mistralai/mistral-small-24b-instruct",
-    'google': "gemini-2.0-flash",
+    'google': "gemini-2.5-flash",
     'ollama': "llama3.2:3b",
 }
 
