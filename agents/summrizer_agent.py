@@ -2,7 +2,8 @@ import asyncio
 import operator
 from pathlib import Path
 from typing import (
-    Any, Annotated, Dict, List, Literal, Optional, TypedDict, Union
+    Any, Annotated, Callable, Dict, 
+    List, Literal, Optional, TypedDict, Union
 )
 
 from langchain_core.documents import Document
@@ -49,13 +50,17 @@ class SummarizerAgent:
     @property
     def map_chain(self) -> RunnableSerializable:
         if not self._map_chain:
-            self._map_chain = ChatPromptTemplate([map_prompt]) | self.llm | StrOutputParser()
+            self._map_chain = (
+                ChatPromptTemplate([map_prompt]) | self.llm | StrOutputParser()
+            )
         return self._map_chain
     
     @property
     def reduce_chain(self) -> RunnableSerializable:
         if not self._reduce_chain:
-            self._reduce_chain = ChatPromptTemplate([reduce_prompt]) | self.llm | StrOutputParser()
+            self._reduce_chain = (
+                ChatPromptTemplate([reduce_prompt]) | self.llm | StrOutputParser()
+            )
         return self._reduce_chain
     
     @property
@@ -159,20 +164,55 @@ class SummarizerAgent:
     async def asummarize(self,
         documents: List[Document],
         config: Optional[RunnableConfig] = None,
+        **kwargs
     ) -> SummarizerAgentState:
         """Asynchronous method to summarize the given list of documents together."""
         state = SummarizerAgentState(documents=documents)
         state = await self.agent.ainvoke(
             input=state,
-            config=config or {"recursion_limit": 30}
+            config=config or {"recursion_limit": 30},
+            **kwargs
         )
         return state
     
     def summarize(self,
         documents: List[Document],
         config: Optional[RunnableConfig] = None,
+        **kwargs
     ) -> SummarizerAgentState:
         """Synchronous method to summarize the given list of documents together."""
         return asyncio.run(self.asummarize(
-            documents, config
+            documents, config, **kwargs
+        ))
+    
+    async def asummarize_stream(self,
+        documents: List[Document],
+        config: Optional[RunnableConfig] = None,
+        stream_updater_callback: Optional[Callable] = None,
+        **kwargs
+    ) -> List[Dict[str, Any]]:
+        """Asynchronous method to summarize the given list of documents together."""
+        steps = []
+        state = SummarizerAgentState(documents=documents)
+        
+        async for step in self.agent.astream(
+            input=state,
+            config=config or {"recursion_limit": 30},
+            **kwargs
+        ):
+            if callable(stream_updater_callback):
+                stream_updater_callback(step)
+            steps.append(step)
+            
+        return steps
+    
+    def summarize_stream(self,
+        documents: List[Document],
+        config: Optional[RunnableConfig] = None,
+        stream_updater_callback: Optional[Callable] = None,
+        **kwargs
+    ) -> SummarizerAgentState:
+        """Synchronous method to summarize the given list of documents together."""
+        return asyncio.run(self.asummarize_stream(
+            documents, config, stream_updater_callback, **kwargs
         ))

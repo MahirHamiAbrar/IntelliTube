@@ -3,7 +3,7 @@ A smart conversational AI tool to summarize audio, video, documents and perform 
 
 IntelliTube is a multi-agent system. The agents are listed below:
 
-### Summarizer Agent
+### [Summarizer Agent](agents/summrizer_agent.py)
 Summarizer agent (built using LangGraph) provides a qualityful summary of a given document. The graph of this agent looks something like below:
 
-<img src="images/summarizer_agent_graph.png" height="auto" width="200" style="border-radius:50%">
+<img src="images/summarizer_agent_graph.png" height="auto" width="200" style="border-radius:10%">
