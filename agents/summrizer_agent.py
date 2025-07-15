@@ -22,7 +22,7 @@ from intellitube.prompts.summarizer_agent_prompts import (
 )
 
 
-class AgentState(TypedDict):
+class SummarizerAgentState(TypedDict):
     """Overall State of the Agent"""
     documents: List[str]
     summaries: Annotated[list, operator.add]
@@ -30,7 +30,7 @@ class AgentState(TypedDict):
     final_summary: str
 
 
-class SummaryState(TypedDict):
+class SummarizerSummaryState(TypedDict):
     """Map node's state"""
     content: str
 
@@ -79,19 +79,19 @@ class SummarizerAgent:
         """Get number of tokens for input contents."""
         return sum(self.llm.get_num_tokens(doc.page_content) for doc in documents)
     
-    async def generate_summary(self, state: SummaryState) -> Dict[str, List[str]]:
+    async def generate_summary(self, state: SummarizerSummaryState) -> Dict[str, List[str]]:
         """Generate summary of a document"""
         llm_response = await self.map_chain.ainvoke(state['content'])
         return {"summaries": [llm_response]}
     
-    def map_summaries(self, state: AgentState) -> List[Send]:
+    def map_summaries(self, state: SummarizerAgentState) -> List[Send]:
         """Maps the summary of the given documents"""
         return [
             Send("generate_summary", {"content": content})
             for content in state["documents"]
         ]
     
-    def collect_summaries(self, state: AgentState) -> Dict[str, List[Document]]:
+    def collect_summaries(self, state: SummarizerAgentState) -> Dict[str, List[Document]]:
         """Collects the summaries of the mapped-documents"""
         return {
             "collapsed_summaries": [
@@ -100,7 +100,7 @@ class SummarizerAgent:
             ]
         }
     
-    async def collapse_summaries(self, state: AgentState) -> Dict[str, list]:
+    async def collapse_summaries(self, state: SummarizerAgentState) -> Dict[str, list]:
         """Collapse the collected summaries"""
         doc_lists = split_list_of_docs(
             state["collapsed_summaries"], self.length_function, self.max_tokens
@@ -113,7 +113,7 @@ class SummarizerAgent:
         return {"collapsed_summaries": results}
     
     def should_collapse(self,
-        state: AgentState
+        state: SummarizerAgentState
     ) -> Literal["collapse_summaries", "generate_final_summary"]:
         n_tokens = self.length_function(state["collapsed_summaries"])
         return (
@@ -122,13 +122,13 @@ class SummarizerAgent:
             else "generate_final_summary"
         )
     
-    async def generate_final_summary(self, state: AgentState) -> Dict[str, Any]:
+    async def generate_final_summary(self, state: SummarizerAgentState) -> Dict[str, Any]:
         llm_response = await self.reduce_chain.ainvoke(state["collapsed_summaries"])
         return {"final_summary": llm_response}
     
     def build_graph(self) -> StateGraph:
         graph = (
-            StateGraph(AgentState)
+            StateGraph(SummarizerAgentState)
             # add nodes
             .add_node("generate_summary", self.generate_summary)  # same as before
             .add_node("collect_summaries", self.collect_summaries)

@@ -16,7 +16,6 @@ from langchain.tools.retriever import create_retriever_tool
 
 from langgraph.graph import StateGraph, START, END
 from intellitube.vector_store import VectorStoreManager
-from intellitube.summarizer import summarize
 
 
 # Chat messages will be stored here
