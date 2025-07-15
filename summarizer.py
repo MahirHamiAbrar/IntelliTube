@@ -5,6 +5,13 @@ from langchain_core.documents import Document
 from typing import List, Literal, Union
 from loguru import logger
 
+import operator
+from typing import Annotated, TypedDict
+from langchain.chains.combine_documents.reduce import (
+    acollapse_docs,
+    split_list_of_docs
+)
+
 
 def summarize(
     llm: BaseLanguageModel, content: Union[str, Document, List[Document]],
