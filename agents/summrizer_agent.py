@@ -1,3 +1,4 @@
+import asyncio
 import operator
 from pathlib import Path
 from typing import (
@@ -155,14 +156,23 @@ class SummarizerAgent:
         mermaid_png = self.agent.get_graph().draw_mermaid_png()
         path.write_bytes(mermaid_png)
     
+    async def asummarize(self,
+        documents: List[Document],
+        config: Optional[RunnableConfig] = None,
+    ) -> SummarizerAgentState:
+        """Asynchronous method to summarize the given list of documents together."""
+        state = SummarizerAgentState(documents=documents)
+        state = await self.agent.ainvoke(
+            input=state,
+            config=config or {"recursion_limit": 30}
+        )
+        return state
+    
     def summarize(self,
         documents: List[Document],
         config: Optional[RunnableConfig] = None,
     ) -> SummarizerAgentState:
-        state = SummarizerAgentState(documents=documents)
-        response = self.agent.invoke(
-            # input={"documents": documents},
-            input=state,
-            config=config or {"recursion_limit": 30}
-        )
-        return SummarizerAgentState(**response["generate_final_summary"])
+        """Synchronous method to summarize the given list of documents together."""
+        return asyncio.run(self.asummarize(
+            documents, config
+        ))

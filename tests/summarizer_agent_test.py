@@ -1,4 +1,3 @@
-import asyncio
 from intellitube.llm import init_llm
 from intellitube.agents import SummarizerAgent
 from intellitube.utils import (
@@ -9,7 +8,7 @@ from langchain_core.documents import Document
 from langchain_text_splitters import CharacterTextSplitter
 
 
-async def test_summarizer_agent() -> None:
+def test_summarizer_agent() -> None:
     # load a youtube video
     video_url = "https://www.youtube.com/watch?v=UF8uR6Z6KLc"
     video_data: YTContentData = download_youtube_audio_or_transcript(video_url)
@@ -35,17 +34,20 @@ async def test_summarizer_agent() -> None:
     summarizer = SummarizerAgent(llm=llm)
     summarizer.save_graph_image("images/summarizer_agent_graph.png")
 
-    last_step = None
+    # last_step = None
     
-    async for step in summarizer.agent.astream(
-        input={"documents": docs},
-        config={"recursion_limit": 30},
-    ):
-        print(list(step.keys()))
-        last_step = step
+    # async for step in summarizer.agent.astream(
+    #     input={"documents": docs},
+    #     config={"recursion_limit": 30},
+    # ):
+    #     print(list(step.keys()))
+    #     last_step = step
     
-    print(last_step)
+    # print(last_step)
+
+    resp = summarizer.summarize(docs)
+    print(resp)
 
 
 if __name__ == '__main__':
-    asyncio.run(test_summarizer_agent())
+    test_summarizer_agent()
