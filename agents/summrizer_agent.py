@@ -2,8 +2,8 @@ import asyncio
 import operator
 from pathlib import Path
 from typing import (
-    Any, Annotated, Callable, Dict, 
-    List, Literal, Optional, TypedDict, Union
+    Any, Annotated, Callable, Dict, List,
+    Literal, Optional, Tuple, TypedDict, Union
 )
 
 from langchain_core.documents import Document
@@ -185,12 +185,12 @@ class SummarizerAgent:
             documents, config, **kwargs
         ))
     
-    async def asummarize_stream(self,
+    async def stream_asummarize(self,
         documents: List[Document],
         config: Optional[RunnableConfig] = None,
         stream_updater_callback: Optional[Callable] = None,
         **kwargs
-    ) -> List[Dict[str, Any]]:
+    ) -> Tuple[List[Dict[str, Any]], SummarizerAgentState]:
         """Asynchronous method to summarize the given list of documents together."""
         steps = []
         state = SummarizerAgentState(documents=documents)
@@ -202,17 +202,24 @@ class SummarizerAgent:
         ):
             if callable(stream_updater_callback):
                 stream_updater_callback(step)
+            
+            results = {
+                k: v
+                for _dict in list(step.values())
+                for k, v in _dict.items()
+            }
+            state = SummarizerAgentState(**state, **results)
             steps.append(step)
             
-        return steps
+        return steps, state
     
-    def summarize_stream(self,
+    def stream_summarize(self,
         documents: List[Document],
         config: Optional[RunnableConfig] = None,
         stream_updater_callback: Optional[Callable] = None,
         **kwargs
-    ) -> SummarizerAgentState:
+    ) -> Tuple[List[Dict[str, Any]], SummarizerAgentState]:
         """Synchronous method to summarize the given list of documents together."""
-        return asyncio.run(self.asummarize_stream(
+        return asyncio.run(self.stream_asummarize(
             documents, config, stream_updater_callback, **kwargs
         ))
