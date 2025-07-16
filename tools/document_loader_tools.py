@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 from loguru import logger
 from typing import List, Union
 
@@ -28,29 +28,33 @@ def load_youtube_transcript(youtube_url: str) -> Union[Exception, List[Document]
         # convert the WEBVTT format trancript to a plain text string
         vtt_str = webvtt_2_str(vtt_file_path=yt_video_data.transcript_path)
         logger.debug(vtt_str[:100])    # print first 100 characters
-        document = Document(vtt_str)
+        document = Document(vtt_str, metadata={ "source": youtube_url })
     except Exception as e:
         logger.error(str(e))
         return e
     return [document]
 
 
-def load_document(document_path: str) -> Union[Exception, List[Document]]:
+def load_document(document_path: Union[Path, str]) -> Union[Exception, List[Document]]:
     """Load the given Document's content to the vector database.
     It is required to answer user-queries based on the the Document context."""
+    
     documents: List[Document]
+    
+    if isinstance(document_path, str):
+        document_path = Path(document_path)
+        
     try:
         logger.debug("Loading Document...")
-        ext = os.path.splitext(document_path)[1][1:].lower()
+        ext = document_path.suffix().lower()
 
-        if ext == 'pdf':
+        if ext == '.pdf':
             documents = PyPDFLoader(document_path).load()
-        elif ext in ['txt', 'py']:
-            with open(document_path, 'r') as file:
-                documents = [Document(
-                    page_content=file.read(),
-                    metadata={ "source": document_path }
-                )]
+        elif ext in ['.txt', '.py']:
+            documents = [Document(
+                page_content=document_path.read_text(),
+                metadata={"source": document_path}
+            )]
         else:
             return Exception(f"Invalid file type: {ext}")
     
