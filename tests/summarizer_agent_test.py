@@ -34,34 +34,39 @@ def test_summarizer_agent(llm: BaseChatModel, docs: List[Document]) -> None:
 
 def test_summarizer_agent_stream(llm: BaseChatModel, docs: List[Document]) -> None:
     def stream_updater_callback(step: Dict[str, Any]):
-        print(f"[UPDATE]: {step}")
+        print(f"[UPDATE]: {list(step.keys())}")
     
     summarizer = SummarizerAgent(llm=llm)
-    steps = summarizer.stream_summarize(
+    results = summarizer.stream_summarize(
         documents=docs,
         stream_updater_callback=stream_updater_callback
     )
 
     print("\n\n\n")
-    print(steps)
+    print(results)  # steps, SummarizerAgentState
 
 async def atest_summarizer_agent_stream(llm: BaseChatModel, docs: List[Document]) -> None:
     def stream_updater_callback(step: Dict[str, Any]):
         print(f"[UPDATE]: {list(step.keys())}")
     
     summarizer = SummarizerAgent(llm=llm)
-    steps = await summarizer.stream_asummarize(
+    results = await summarizer.stream_asummarize(
         documents=docs,
         stream_updater_callback=stream_updater_callback
     )
 
     print("\n\n\n")
-    print(steps)
+    print(results)  # steps, SummarizerAgentState
 
 
 if __name__ == '__main__':
     llm = init_llm('google')
     docs = load_document()
-    # test_summarizer_agent(llm, docs)
-    # test_summarizer_agent_stream(llm, docs)
-    asyncio.run(atest_summarizer_agent_stream(llm, docs))
+
+    run_func = lambda n: [
+        test_summarizer_agent,
+        test_summarizer_agent_stream,
+        lambda llm, docs: asyncio.run(atest_summarizer_agent_stream(llm, docs)),
+    ][n - 1].__call__(llm, docs)
+
+    run_func(3)
