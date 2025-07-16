@@ -132,7 +132,7 @@ class SummarizerAgent(BaseAgent):
             .add_conditional_edges("collapse_summaries", self.should_collapse)
             .add_edge("generate_final_summary", END)
         )
-        self._agent = None  # reset the agent variable
+        super().build_graph()
         return graph
     
     async def asummarize(self,

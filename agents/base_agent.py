@@ -26,7 +26,7 @@ class BaseAgent(ABC):
     
     @abstractmethod
     def build_graph(self) -> StateGraph:
-        pass
+        self._agent = None
 
     def __init__(self, llm: BaseChatModel) -> None:
         self.llm = llm
