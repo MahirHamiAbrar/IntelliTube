@@ -1,9 +1,8 @@
 import asyncio
 import operator
-from pathlib import Path
 from typing import (
     Any, Annotated, Callable, Dict, List,
-    Literal, Optional, Tuple, TypedDict, Union
+    Literal, Optional, Tuple, TypedDict
 )
 
 from langchain_core.documents import Document
@@ -40,8 +39,6 @@ class SummarizerSummaryState(TypedDict):
 
 class SummarizerAgent(BaseAgent):
     max_tokens: int
-    llm: BaseChatModel
-
     _map_chain: RunnableSerializable = None
     _reduce_chain: RunnableSerializable = None
 
@@ -65,8 +62,7 @@ class SummarizerAgent(BaseAgent):
         llm: BaseChatModel,
         max_tokens: int = 2048
     ) -> None:
-        BaseAgent.__init__(self)
-        self.llm = llm
+        BaseAgent.__init__(self, llm)
         self.max_tokens = max_tokens
     
     def length_function(self, documents: List[Document]) -> int:
@@ -138,15 +134,6 @@ class SummarizerAgent(BaseAgent):
         )
         self._agent = None  # reset the agent variable
         return graph
-    
-    def save_graph_image(self, path: Union[Path, str]) -> None:
-        if isinstance(path, str):
-            path = Path(path)
-        elif not isinstance(path, Path):
-            raise TypeError(f'Provided "path" is neither a Path() instance nor a str() instance.')
-        
-        mermaid_png = self.agent.get_graph().draw_mermaid_png()
-        path.write_bytes(mermaid_png)
     
     async def asummarize(self,
         documents: List[Document],
