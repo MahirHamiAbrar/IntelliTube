@@ -202,7 +202,7 @@ def chat_loop() -> None:
         ai_msg: AIMessage = chat_manager.chat_messages[-1]
         ai_msg.pretty_print()
         usr_msg: str = input(">> ").strip()
-    chat_manager.end_chat()
+    chat_manager.save_chat()
     chat_manager.remove_unlisted_chats()
 
 

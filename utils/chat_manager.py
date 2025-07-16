@@ -5,7 +5,7 @@ import uuid
 import shutil
 from loguru import logger
 from datetime import datetime
-from typing_extensions import List, Dict, TypedDict, Optional
+from typing_extensions import Any, List, Dict, TypedDict, Optional
 
 from pydantic import BaseModel
 from langchain_core.messages import BaseMessage
@@ -19,6 +19,7 @@ class ChatInfo(TypedDict):
 
 class Chat(BaseModel):
     messages: List[BaseMessage]
+    additional_data: Dict[str, Any] = {}
 
 
 class ChatManager:
@@ -101,7 +102,7 @@ class ChatManager:
     
     @property
     def chat_messages(self) -> List[BaseMessage]:
-        return self._chat.messages
+        return self.chat.messages
     
     @chat_messages.setter
     def chat_messages(self, messages: List[BaseMessage]) -> None:
@@ -123,7 +124,6 @@ class ChatManager:
             created_timestamp=_dt_now_ts,
             last_accessed_timestamp=_dt_now_ts,
         )
-
         return _manager
     
     @staticmethod
@@ -163,20 +163,23 @@ class ChatManager:
         self._chat_list = self.load_chatlist()
         return self._chat_list
     
-    def save_chatlist(self) -> None:
+    def _save_chatlist(self) -> None:
         with open(self._chatlist_filepath, 'w') as chat_list_file:
             json.dump(self._chat_list, chat_list_file, indent=4)
     
     def get_chat_dirpath(self, chat_id: str) -> str:
         return os.path.join(self.root_dir, self.chats_dir, chat_id, self.chat_filename)
 
-    def save_chat(self, indent: int = 4) -> None:
+    def _save_chat(self, indent: int = 4) -> None:
         with open(self.get_chat_dirpath(self._chat_id), 'w') as chat_file:
-            json.dump(self._chat.model_dump(), chat_file, indent=indent)
+            json.dump(self.chat.model_dump(), chat_file, indent=indent)
     
-    def end_chat(self) -> None:
-        self.save_chat()
-        self.save_chatlist()
+    def save_chat(self) -> None:
+        self.chatlist[self.chat_id]["last_accessed_timestamp"] = (
+            datetime.timestamp(datetime.now())
+        )
+        self._save_chat()
+        self._save_chatlist()
     
     def delete_current_chat(self) -> None:
         shutil.rmtree(self.chat_dirpath)
@@ -186,7 +189,7 @@ class ChatManager:
         shutil.rmtree(self.get_chat_dirpath(chat_id))
     
     def add_message(self, message: BaseMessage) -> None:
-        self._chat.messages.append(message)
+        self.chat.messages.append(message)
     
     def remove_unlisted_chats(self, excluded_ids: Optional[List[str]] = None) -> None:
         """Remove the chats that are not in the `chatlist.json`.
@@ -198,8 +201,6 @@ class ChatManager:
         chats_dirpath = os.path.join(self.root_dir, self.chats_dir)
         chat_ids = set(os.listdir(chats_dirpath))
         excluded_ids = set((excluded_ids or []) + [self.chat_id] + list(self.chatlist.keys()))
-
-        # print(chat_ids)
 
         for chat_id in list((chat_ids - excluded_ids) | (excluded_ids - chat_ids)):
             try:

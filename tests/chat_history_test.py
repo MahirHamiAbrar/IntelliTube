@@ -8,7 +8,7 @@ def new_chat_test() -> None:
     print("Chat ID:", chm._chat_id)
     chm.add_message(HumanMessage("Hi!"))
     chm.add_message(AIMessage("Hello there! How can I assist you?"))
-    chm.end_chat()
+    chm.save_chat()
     print(chm.chatlist)
 
 
@@ -20,7 +20,7 @@ def load_existing_chat_test() -> None:
     chm = ChatManager.from_chat_history(chat_id=chat_id)
     print("Chat ID:", chm.chat_id)
     chm.add_message(ToolMessage(content="This is a tool message", tool_call_id=chm.chat_id))
-    chm.end_chat()
+    chm.save_chat()
 
 
 if __name__ == '__main__':
