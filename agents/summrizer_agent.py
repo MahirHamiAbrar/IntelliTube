@@ -18,8 +18,8 @@ from langchain.chains.combine_documents.reduce import (
 
 from langgraph.constants import Send
 from langgraph.graph import START, END, StateGraph
-from langgraph.graph.state import CompiledStateGraph
 
+from intellitube.agents.base_agent import BaseAgent
 from intellitube.prompts.summarizer_agent_prompts import (
     map_prompt, reduce_prompt
 )
@@ -38,12 +38,10 @@ class SummarizerSummaryState(TypedDict):
     content: str
 
 
-class SummarizerAgent:
+class SummarizerAgent(BaseAgent):
     max_tokens: int
     llm: BaseChatModel
 
-    _graph: StateGraph = None
-    _agent: CompiledStateGraph = None
     _map_chain: RunnableSerializable = None
     _reduce_chain: RunnableSerializable = None
 
@@ -62,23 +60,12 @@ class SummarizerAgent:
                 ChatPromptTemplate([reduce_prompt]) | self.llm | StrOutputParser()
             )
         return self._reduce_chain
-    
-    @property
-    def graph(self) -> StateGraph:
-        if not self._graph:
-            self._graph = self.build_graph()
-        return self._graph
-    
-    @property
-    def agent(self) -> CompiledStateGraph:
-        if not self._agent:
-            self._agent = self.graph.compile()
-        return self._agent
 
     def __init__(self,
         llm: BaseChatModel,
         max_tokens: int = 2048
     ) -> None:
+        BaseAgent.__init__(self)
         self.llm = llm
         self.max_tokens = max_tokens
     
