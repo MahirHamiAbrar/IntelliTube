@@ -75,8 +75,12 @@ def document_already_loaded(key: Union[Document, str]) -> bool:
 # define Router Agent Output Schema
 class QueryExtractorAgentResponse(BaseModel):
     instruction: str = Field(description=(
-        "The user's instruction or request with quoted word-for-word with any URLs or Paths removed.\n"
+        "The user's instruction quoted word-for-word with any URLs or Paths removed.\n"
         "Preserve the casing, punctuation, and wording. Do NOT fix typos or grammar."
+    ))
+    analysis: str = Field(description=(
+        "Aanalyze the RAW data and describe what the user actually meant in one sentence."
+        "Be clear and concise about the user's intention."
     ))
     url: Optional[str] = Field(default=None, description=(
         "The URL or local path provided by the user, if any."
@@ -103,8 +107,18 @@ class AgentState(BaseModel):
     """Router Agent Response Status"""
 
 
-def extract_query(user_message: HumanMessage) -> QueryExtractorAgentResponse:
-    structured_llm = llm.with_structured_output(QueryExtractorAgentResponse)
+def extract_query(user_message: HumanMessage, llm_custom = None) -> QueryExtractorAgentResponse:
+    structured_llm = (llm_custom or llm).with_structured_output(QueryExtractorAgentResponse)
     response = structured_llm.invoke([user_message])
     # return QueryExtractorAgentResponse(**response)
     return response
+
+if __name__ == "__main__":
+    user_message = (
+        # "I wrote the idea somewhere in draft.txt... just quote it pls"
+        "Do you know what an idea is?"
+    )
+
+    response = extract_query(user_message)
+    print(f"{user_message = }", end='\n\n')
+    print(response)

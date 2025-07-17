@@ -199,7 +199,10 @@ user_message = lambda n: [
 
 
 import json
+import time
 from pathlib import Path
+
+from intellitube.llm import init_llm
 from intellitube.main_agent import extract_query
 from intellitube.utils.path_manager import intellitube_dir
 
@@ -224,20 +227,40 @@ def create_unique_path(folder: Path | str, filename: Path | str) -> Path:
 
 if __name__ == '__main__':
 
+    # Each model of Gemini has 10 RPM (Requests per Minute); 250 RPD (Requests per Day)
+    # Groq has 50 RPM (1000 RPD)
+    llms = {
+        1: init_llm(model_provider='google_genai', model_name='gemini-2.0-flash'),  # 4 req
+        2: init_llm(model_provider='google_genai', model_name='gemini-2.5-flash'),  # 8 req
+        3: init_llm(model_provider='groq'),                                         # 12 req
+    }
+    
+    llmid = 1
+    llm = llms[llmid]
+    min_reqs = 4
+    max_llmid = len(list(llms.keys()))
+
     messages = []
 
     try:
-        # for i in range(1, 51):
-        for i in range(20, 21):
+        for i in range(1, 51):
+        # for i in range(40, 51):
+
+            if i % ((min_reqs + 1) * llmid) == 0:
+                if llmid == max_llmid: llmid = 1
+                else: llmid += 1
+                llm = llms[llmid]
+                print("Using LLM: ", llmid)
+
             message = user_message(i)
-            query_extractor_response = extract_query(message)
+            query_extractor_response = extract_query(message, llm)
 
             messages.append({
                 "user": message,
                 "extractor": query_extractor_response.model_dump()
             })
 
-            print("=== " * 30)
+            print("===" * 15, f"  MESSAGE {i:03d}  ", "===" * 15)
             print(f'User Message: {message}')
             print('---' * 30)
             print(query_extractor_response, end='\n\n')
@@ -245,7 +268,7 @@ if __name__ == '__main__':
         print(e)
     
     path = create_unique_path(
-        intellitube_dir / "test_data/queryextractor", "extractor_messages_gemini.json"
+        intellitube_dir / "test_data/queryextractor", "extractor_messages_gemini_ALL.json"
     )
     with open(path, 'w') as file:
         json.dump(messages, file, indent=4)
