@@ -1,12 +1,49 @@
+"""
+WORKFLOW EXPLAINED:
+
+Example User Message:
+    How to implement an agentic rag system according to this website?
+    https://langchain-ai.github.io/langgraph/tutorials/rag/langgraph_agentic_rag/
+
+
+Steps to process this user message:
+    0. [START]
+    1. Separate the Query & URL
+    2. Try to load the URL
+        1. Already loaded?
+            1. [GO TO: RETRIEVER STEP (3)]
+        2. Not loaded?
+            1. Load it
+            2. Generate a Summary
+                1. Save the summary
+            3. Save the document
+            4. [GO TO: RETRIEVER STEP (3)]
+    3. Retrieve Information form database
+    4. Pass information to Chat Agent
+        1. Generate a response
+        2. Show it to the user
+        3. [END]
+
+"""
+
 from typing_extensions import (
+    Annotated, Sequence,
     Dict, Literal, TypedDict, Optional, Union
 )
 
 from pydantic import BaseModel, Field
 from langchain_core.documents import Document
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import (
+    AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
+)
+
+from langgraph.graph.message import add_messages
+from langgraph.graph import StateGraph, START, END
 
 from intellitube.llm import init_llm
 from intellitube.tools import document_loader_tools
+from intellitube.prompts import router_agent_prompts
 
 
 class DocumentInfoModel(TypedDict):
@@ -31,19 +68,25 @@ def document_already_loaded(key: Union[Document, str]) -> bool:
     return document_database.get(key) is not None
 
 
+# =============================================
+# STEP 01: Separate the Query & URL
+# =============================================
+
 # define Router Agent Output Schema
-class RouterAgentResponse(BaseModel):
-    user_query: str = Field(description=(
-        "The user's original query EXACTLY as it appears, without any modification, rewording, or interpretation.\n"
-        "You MUST NOT include any URLs, file paths, or hyperlinks in this field — only the natural language query.\n"
+class QueryExtractorAgentResponse(BaseModel):
+    instruction: str = Field(description=(
+        "The user's instruction or request with quoted word-for-word with any URLs or Paths removed.\n"
         "Preserve the casing, punctuation, and wording. Do NOT fix typos or grammar."
     ))
     url: Optional[str] = Field(default=None, description=(
-        "The exact URL or local document/file path mentioned in the user's input.\n"
+        "The URL or local path provided by the user, if any."
+        "Should be extracted separately from the user-query."
         "If there is no URL or file path, leave this as null (do not fabricate one).\n"
         "Example: 'https://example.com/page', 'C:/Documents/myfile.txt', './notes.md'"
     ))
-    url_of: Optional[Literal["youtube_video", "website", "document"]] = Field(default=None, description=(
+    urlof: Optional[
+        Literal["youtube_video", "website", "document"]
+    ] = Field(default=None, description=(
         "The type of content the `url` field refers to:\n"
         "- 'youtube_video': if it's a YouTube video link\n"
         "- 'website': for general websites or web pages\n"
@@ -51,15 +94,17 @@ class RouterAgentResponse(BaseModel):
         "If no URL/path is provided, this should be null."
     ))
 
-# Router Agent Nodes
-def router_agent_node(state: AgentState) -> AgentState:
-    structured_llm = llm.with_structured_output(RouterAgentResponse)
-    messages = ChatPromptTemplate.from_messages(
-        [router_agent_prompts.system_prompt, state["messages"][-1]]
-    )
-    agent_resp: RouterAgentResponse = structured_llm.invoke(
-        messages.format_messages()
-    )
-    return {"messages": [HumanMessage(agent_resp.user_query)], "router_response": agent_resp}
 
 
+class AgentState(BaseModel):
+    messages: Annotated[Sequence[BaseMessage], add_messages]
+    """Conversation messages"""
+    query_extractor_response: QueryExtractorAgentResponse = None
+    """Router Agent Response Status"""
+
+
+def extract_query(user_message: HumanMessage) -> QueryExtractorAgentResponse:
+    structured_llm = llm.with_structured_output(QueryExtractorAgentResponse)
+    response = structured_llm.invoke([user_message])
+    # return QueryExtractorAgentResponse(**response)
+    return response
