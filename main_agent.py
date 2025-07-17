@@ -26,6 +26,7 @@ Steps to process this user message:
 
 """
 
+from loguru import logger
 from typing_extensions import (
     Annotated, Sequence,
     Dict, Literal, TypedDict, Optional, Union
@@ -42,15 +43,26 @@ from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph, START, END
 
 from intellitube.llm import init_llm
+from intellitube.utils import ChatManager
 from intellitube.tools import document_loader_tools
 from intellitube.prompts import router_agent_prompts
+from intellitube.agents.summrizer_agent import SummarizerAgent
 
+
+# document loader functions
+document_loader_functions = {
+    "document": document_loader_tools.load_document,
+    "youtube_video": document_loader_tools.load_youtube_transcript,
+    "website": document_loader_tools.load_webpage
+}
 
 class DocumentInfoModel(TypedDict):
     document: Document
     summary: str
 
 llm = init_llm(model_provider='google')
+summarizer = SummarizerAgent(llm=llm)
+
 document_database: Dict[str, DocumentInfoModel] = {}
 
 
@@ -99,7 +111,6 @@ class QueryExtractorAgentResponse(BaseModel):
     ))
 
 
-
 class AgentState(BaseModel):
     messages: Annotated[Sequence[BaseMessage], add_messages]
     """Conversation messages"""
@@ -132,6 +143,19 @@ def print_route(state: AgentState, route: str) -> AgentState:
 
 
 # =============================================
+# STEP 02: Try to load the document
+# =============================================
+def document_loader_node(
+    state: AgentState
+) -> Literal["summarize_document", "retrieve_documents"]:
+    key = state.query_extractor_response.url    # the URL is the key
+    # 2.1: check if the document is already loaded
+    if document_already_loaded(key=key):
+        return "retrieve_documents"
+    return ":summarize_document"
+
+
+# =============================================
 # BUILD THE GRAPH
 # =============================================
 graph = (
@@ -160,14 +184,20 @@ agent = graph.compile()
 
 
 if __name__ == "__main__":
-    user_message = (
-        "I wrote the idea somewhere in draft.txt... just quote it pls"
-        # "Do you know what an idea is?"
-    )
+    try:
+        chatman = ChatManager.new_chat()
+        logger.debug(f"Chat ID: {chatman.chat_id}")
 
-    resp = agent.invoke({"messages": [user_message]})
-    print(resp)
+        user_message = (
+            "I wrote the idea somewhere in draft.txt... just quote it pls"
+            # "Do you know what an idea is?"
+        )
 
-    # response = extract_query(user_message)
-    # print(f"{user_message = }", end='\n\n')
-    # print(response)
+        resp = agent.invoke({"messages": [user_message]})
+        print(resp)
+
+    except Exception as e:
+        logger.error(str(e))
+    finally:
+        # save the chat before exit
+        chatman.save_chat()
