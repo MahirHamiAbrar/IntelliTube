@@ -33,10 +33,10 @@ from typing_extensions import (
 
 from pydantic import BaseModel, Field
 from langchain_core.documents import Document
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import (
     AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 )
+from langchain_core.language_models import BaseChatModel
 
 from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph, START, END
@@ -107,18 +107,67 @@ class AgentState(BaseModel):
     """Router Agent Response Status"""
 
 
-def extract_query(user_message: HumanMessage, llm_custom = None) -> QueryExtractorAgentResponse:
+def extract_query(
+    user_message: HumanMessage, llm_custom: BaseChatModel = None
+) -> QueryExtractorAgentResponse:
     structured_llm = (llm_custom or llm).with_structured_output(QueryExtractorAgentResponse)
     response = structured_llm.invoke([user_message])
-    # return QueryExtractorAgentResponse(**response)
     return response
+
+
+def router_node(state: AgentState) -> AgentState:
+    user_message: HumanMessage = state.messages[-1]
+    # state.query_extractor_response = extract_query(user_message)
+    return {"query_extractor_response": extract_query(user_message)}
+
+def select_route(state: AgentState) -> Literal["load_document", "retrieve_documents"]:
+    extractor_response = state.query_extractor_response
+    if not extractor_response.url:
+        return "retrieve_documents"
+    return "load_document"
+
+def print_route(state: AgentState, route: str) -> AgentState:
+    print("Selected Route: ", route)
+    return state
+
+
+# =============================================
+# BUILD THE GRAPH
+# =============================================
+graph = (
+    StateGraph(state_schema=AgentState)
+    # add nodes
+    .add_node(router_node)
+    .add_node("printer_node1", lambda state: print_route(state, "load_document"))
+    .add_node("printer_node2", lambda state: print_route(state, "retrieve_documents"))
+
+    # add edges
+    .add_edge(START, "router_node")
+    .add_conditional_edges(
+        "router_node",
+        select_route,
+        {
+            "load_document": "printer_node1",
+            "retrieve_documents": "printer_node2",
+        }
+    )
+    .add_edge("printer_node1", END)
+    .add_edge("printer_node2", END)
+)
+
+agent = graph.compile()
+
+
 
 if __name__ == "__main__":
     user_message = (
-        # "I wrote the idea somewhere in draft.txt... just quote it pls"
-        "Do you know what an idea is?"
+        "I wrote the idea somewhere in draft.txt... just quote it pls"
+        # "Do you know what an idea is?"
     )
 
-    response = extract_query(user_message)
-    print(f"{user_message = }", end='\n\n')
-    print(response)
+    resp = agent.invoke({"messages": [user_message]})
+    print(resp)
+
+    # response = extract_query(user_message)
+    # print(f"{user_message = }", end='\n\n')
+    # print(response)
