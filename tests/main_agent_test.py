@@ -201,6 +201,8 @@ user_message = lambda n: [
 import json
 from pathlib import Path
 from intellitube.main_agent import extract_query
+from intellitube.utils.path_manager import intellitube_dir
+
 
 def create_unique_path(folder: Path | str, filename: Path | str) -> Path:
     if not isinstance(folder, Path):
@@ -214,7 +216,7 @@ def create_unique_path(folder: Path | str, filename: Path | str) -> Path:
     path = folder / filename
 
     while path.exists():
-        filename = stem + f"{n:05d}" + suffix
+        filename = stem + f"_{n:05d}" + suffix
         path = folder / filename
         n += 1
     return path
@@ -226,7 +228,7 @@ if __name__ == '__main__':
 
     try:
         # for i in range(1, 51):
-        for i in range(20, 30):
+        for i in range(20, 21):
             message = user_message(i)
             query_extractor_response = extract_query(message)
 
@@ -243,7 +245,7 @@ if __name__ == '__main__':
         print(e)
     
     path = create_unique_path(
-        "test_data/queryextractor", "extractor_messages_gemini.json"
+        intellitube_dir / "test_data/queryextractor", "extractor_messages_gemini.json"
     )
     with open(path, 'w') as file:
         json.dump(messages, file, indent=4)
