@@ -1,8 +1,7 @@
 import asyncio
-import operator
 from typing import (
-    Any, Annotated, Callable, Dict, List,
-    Literal, Optional, Tuple, TypedDict
+    Any, Callable, Dict, List,
+    Literal, Optional, Tuple, 
 )
 
 from langchain_core.documents import Document
@@ -19,22 +18,8 @@ from langgraph.constants import Send
 from langgraph.graph import START, END, StateGraph
 
 from intellitube.agents.base_agent import BaseAgent
-from intellitube.prompts.summarizer_agent_prompts import (
-    map_prompt, reduce_prompt
-)
-
-
-class SummarizerAgentState(TypedDict):
-    """Overall State of the Agent"""
-    documents: List[str]
-    summaries: Annotated[list, operator.add]
-    collapsed_summaries: List[Document]
-    final_summary: str
-
-
-class SummarizerSummaryState(TypedDict):
-    """Map node's state"""
-    content: str
+from .prompts import map_prompt, reduce_prompt
+from .states import SummarizerAgentState, SummarizerSummaryState
 
 
 class SummarizerAgent(BaseAgent):
