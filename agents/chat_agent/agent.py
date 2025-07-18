@@ -1,21 +1,12 @@
-from typing_extensions import Annotated, List, Sequence, TypedDict
-
-from langgraph.graph.message import add_messages
-from langgraph.graph import StateGraph, START, END
+from langgraph.graph import StateGraph
 
 from langchain_core.documents import Document
-from langchain_core.messages import BaseMessage
 from langchain_core.language_models import BaseChatModel
 
+from .states import ChatAgentState
 from intellitube.utils import ChatManager
 from intellitube.agents.base_agent import BaseAgent
 
-
-class ChatAgentState(TypedDict):
-    messages: Annotated[Sequence[BaseMessage], add_messages]
-    """Chat conversation messages with the agent"""
-    documents: List[Document] = []
-    """Documents added by the user"""
 
 
 class ChatAgent(BaseAgent):
