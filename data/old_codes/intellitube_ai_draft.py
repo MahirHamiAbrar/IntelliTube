@@ -19,8 +19,10 @@ from intellitube.utils import ChatManager
 from intellitube.vector_store import VectorStoreManager
 from intellitube.tools import document_loader_tools
 from intellitube.prompts import (
-    chat_agent_prompts, router_agent_prompts
+    chat_agent_prompts
 )
+
+from data.old_codes import router_agent_prompts
 
 
 # initialize chat manager (new chat)
