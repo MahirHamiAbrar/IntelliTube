@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing_extensions import (
-    Annotated, List, Literal, Optional, Sequence
+    Annotated, List, Literal, Optional, Sequence, TypedDict
 )
 
 from langchain_core.documents import Documents
@@ -38,12 +38,17 @@ class AgentState(BaseModel):
     query_extractor_response: QueryExtractorResponseState = None
     """Router Agent Response Status"""
 
+class DocumentData(TypedDict):
+    documents: List[Documents]
+    """Retrieved documents"""
+    metadata: QueryExtractorResponseState
+    """Document information"""
+    summary: Optional[str] = None
+
 class RetrieverNodeState(BaseModel):
     query: str
     """The user query for retrieval context"""
-    documents: list[Documents]
-    """Retrieved documents"""
-    document_info: QueryExtractorResponseState
+    data: DocumentData
     """Document information"""
     multi_query: List[str] = None
     """Generated multiple query for multi-query retrieval"""

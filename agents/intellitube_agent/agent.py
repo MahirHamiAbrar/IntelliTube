@@ -2,11 +2,14 @@ from loguru import logger
 from pathlib import Path
 from typing_extensions import Literal, Union
 
+from intellitube.llm import init_llm
 from intellitube.utils import ChatManager
 from intellitube.tools import document_loader_tools
 from intellitube.vector_store import VectorStoreManager
+from intellitube.agents.summarizer_agent import SummarizerAgent
 from .states import (
-    AgentState, QueryExtractorResponseState, RetrieverNodeState
+    AgentState, DocumentData, 
+    QueryExtractorResponseState, RetrieverNodeState
 )
 
 from langchain_core.documents import Document
@@ -17,6 +20,8 @@ from langchain_core.messages import (
 
 from langgraph.types import Command, Send
 
+# initialize new LLM
+llm = init_llm(model_provider='google')
 
 # initialize new chat
 chatman = ChatManager.new_chat()
@@ -56,7 +61,7 @@ document_loader_functions = {
     "website": document_loader_tools.load_webpage
 }
 
-loaded_docs: dict[str, list[QueryExtractorResponseState, list[Document]]] = {}
+loaded_docs: dict[str, DocumentData] = {}
 
 def load_document_node(
     state: AgentState
@@ -79,10 +84,7 @@ def load_document_node(
         # update the state and redirect to the retriever node
         return Send(
             node="retriever",
-            arg=RetrieverNodeState(
-                query=state.messages[-1], documents=loaded_docs[data.url][1],
-                document_info=loaded_docs[data.url][0]
-            )
+            arg=RetrieverNodeState(query=state.messages[-1], data=loaded_docs[data.url])
         )
 
     # 2. Try to load it
@@ -104,8 +106,8 @@ def load_document_node(
         )
 
     # loading successful; save document info
-    loaded_docs[data.url] = [data, docs]
-
+    loaded_docs[data.url] = DocumentData(documents=docs, metadata=data)
+    logger.info("Adding document to vector database ...")
     # save documents in vector store
     vdb.add_documents(
         docs, split_text=True,
@@ -118,16 +120,16 @@ def load_document_node(
     # implement logic for redirection to summarizer llm with new state object
     return Command(
         goto="summarizer",
-        update=RetrieverNodeState(
-            query=state.messages[-1], documents=loaded_docs[data.url][1],
-            document_info=loaded_docs[data.url][0]
-        ),
+        update=RetrieverNodeState(query=state.messages[-1], data=loaded_docs[data.url]),
     )
 
 
 # NODE 03: Summarizer Node
+summarizer = SummarizerAgent(llm=llm)
 def summarizer_node(state: RetrieverNodeState):
-    return Send(node="retriever", arg={})
+    summary = summarizer.summarize(documents=state.documents)
+    state.data["summary"] = summary
+    return Send(node="retriever", arg=state)
 
 # NODE 04: Retrieve Information from database
 def retriever_node(state: RetrieverNodeState):
