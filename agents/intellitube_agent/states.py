@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
-from typing_extensions import Annotated, Literal, Optional, Sequence
+from typing_extensions import (
+    Annotated, List, Literal, Optional, Sequence
+)
 
 from langchain_core.documents import Documents
 from langchain_core.messages import BaseMessage
@@ -35,5 +37,15 @@ class AgentState(BaseModel):
     """Conversation messages"""
     query_extractor_response: QueryExtractorResponseState = None
     """Router Agent Response Status"""
-    documents: list[Documents] = None
 
+class RetrieverNodeState(BaseModel):
+    query: str
+    """The user query for retrieval context"""
+    documents: list[Documents]
+    """Retrieved documents"""
+    document_info: QueryExtractorResponseState
+    """Document information"""
+    multi_query: List[str] = None
+    """Generated multiple query for multi-query retrieval"""
+    rewritten_query: str = None
+    """Improved contextual rewritten form of the original user query"""

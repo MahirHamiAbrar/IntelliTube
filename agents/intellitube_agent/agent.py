@@ -4,13 +4,17 @@ from typing_extensions import Literal, Union
 
 from intellitube.utils import ChatManager
 from intellitube.tools import document_loader_tools
-from .states import AgentState, QueryExtractorResponseState
+from .states import (
+    AgentState, QueryExtractorResponseState, RetrieverNodeState
+)
 
 from langchain_core.documents import Document
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import (
     AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 )
+
+from langgraph.types import Command, Send
 
 
 # initialize new chat
@@ -44,7 +48,7 @@ document_loader_functions = {
     "website": document_loader_tools.load_webpage
 }
 
-loaded_docs: dict[str, QueryExtractorResponseState] = {}
+loaded_docs: dict[str, list[QueryExtractorResponseState, list[Document]]] = {}
 
 def load_document_node(state: AgentState):
     data: QueryExtractorResponseState = state.query_extractor_response
@@ -58,24 +62,40 @@ def load_document_node(state: AgentState):
 
     # 1. ALREADY LOADED?
     if data.url in loaded_docs:
-        pass    # implement logic for redirection to retriever node
+        # update the state and redirect to the retriever node
+        return Send(
+            node="retriever",
+            arg=RetrieverNodeState(
+                query=state.messages[-1], documents=loaded_docs[data.url][1],
+                document_info=loaded_docs[data.url][0]
+            )
+        )
 
     # 2. Try to load it
     func = document_loader_functions.get(data.urlof, None)
     if not func:
-        # return {"messages": [ToolMessage("Error Loading Document")]}
-        pass    # implement logic for redirection to chat llm with new state object
+        # state update + redirection to the chat_agent node (with err msg)
+        return Command(
+            update={"messages": [ToolMessage("Error Loading Document. Invalid Function Call from LLM!")]},
+            goto="chat_agent"
+        )
 
-    out: Union[Exception, Document] = func(data.url)
+    docs: Union[Exception, Document] = func(data.url)
     # check for error
-    if isinstance(out, Exception):
-        # return {"messages": [ToolMessage(f"Error Loading Document. Error Details: {str(out)}")]}
-        pass    # implement logic for redirection to chat llm with new state object
+    if isinstance(docs, Exception):
+        # state update + redirection to the chat_agent node (with err msg)
+        return Command(
+            update={"messages": [ToolMessage(f"Error Loading Document. Error Details: {str(docs)}")]}, 
+            goto="chat_agent"
+        )
 
-    # loading successful
-    loaded_docs[data.url] = data
-    state.documents = out
+    # loading successful; save document info
+    loaded_docs[data.url] = [data, docs]
     # implement logic for redirection to summarizer llm with new state object
-
-
-    
+    return Command(
+        update=RetrieverNodeState(
+            query=state.messages[-1], documents=loaded_docs[data.url][1],
+            document_info=loaded_docs[data.url][0]
+        ),
+        goto="summarizer"
+    )
