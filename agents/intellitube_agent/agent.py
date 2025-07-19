@@ -50,15 +50,21 @@ document_loader_functions = {
 
 loaded_docs: dict[str, list[QueryExtractorResponseState, list[Document]]] = {}
 
-def load_document_node(state: AgentState):
+def load_document_node(
+    state: AgentState
+) -> Union[Send[RetrieverNodeState], Command[AgentState, RetrieverNodeState]]:
+    """
+    # Load a document from the given URL/Local Path.
+
+    How it works:
+         1. Already Loaded?
+           1. YES? [GO TO RETRIEVER]
+           2. NO? [GO TO STEP 2]
+         2. Try to load it
+           1. Error Loading: Return ToolMessage("Error") to Chat LLM
+           2. Successful Loading: [GO TO SUMMARIZER LLM]
+    """
     data: QueryExtractorResponseState = state.query_extractor_response
-    
-    # 1. Already Loaded?
-    #   1. YES? [GO TO RETRIEVER]
-    #   2. NO? [GO TO STEP 2]
-    # 2. Try to load it
-    #   1. Error Loading: Return ToolMessage("Error") to Chat LLM
-    #   2. Successful Loading: [GO TO SUMMARIZER LLM]
 
     # 1. ALREADY LOADED?
     if data.url in loaded_docs:
@@ -76,8 +82,8 @@ def load_document_node(state: AgentState):
     if not func:
         # state update + redirection to the chat_agent node (with err msg)
         return Command(
+            goto="chat_agent",
             update={"messages": [ToolMessage("Error Loading Document. Invalid Function Call from LLM!")]},
-            goto="chat_agent"
         )
 
     docs: Union[Exception, Document] = func(data.url)
@@ -85,17 +91,17 @@ def load_document_node(state: AgentState):
     if isinstance(docs, Exception):
         # state update + redirection to the chat_agent node (with err msg)
         return Command(
+            goto="chat_agent",
             update={"messages": [ToolMessage(f"Error Loading Document. Error Details: {str(docs)}")]}, 
-            goto="chat_agent"
         )
 
     # loading successful; save document info
     loaded_docs[data.url] = [data, docs]
     # implement logic for redirection to summarizer llm with new state object
     return Command(
+        goto="summarizer",
         update=RetrieverNodeState(
             query=state.messages[-1], documents=loaded_docs[data.url][1],
             document_info=loaded_docs[data.url][0]
         ),
-        goto="summarizer"
     )
