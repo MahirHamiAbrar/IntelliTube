@@ -45,12 +45,20 @@ class DocumentData(TypedDict):
     """Document information"""
     summary: Optional[str] = None
 
+
+class MultiQueryData(BaseModel):
+    multi_query: List[str] = Field(description=(
+        "A list of diverse and semantically rich sub-queries generated from the original user query. "
+        "These sub-queries target different possible interpretations, phrasings, or aspects of the original question, "
+        "and are used to enhance document retrieval coverage and relevance."
+    ))
+    rewritten_query: str = Field(description=(
+        "An improved or clarified version of the original user query, rewritten to better reflect the user's intent, "
+        "optimize for retrieval performance, and reduce ambiguity or hallucination risk."
+    ))
+
 class RetrieverNodeState(BaseModel):
-    query: str
+    query_data: MultiQueryData
     """The user query for retrieval context"""
     data: DocumentData
     """Document information"""
-    multi_query: List[str] = None
-    """Generated multiple query for multi-query retrieval"""
-    rewritten_query: str = None
-    """Improved contextual rewritten form of the original user query"""

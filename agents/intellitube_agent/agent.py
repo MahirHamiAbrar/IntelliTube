@@ -11,6 +11,7 @@ from .states import (
     AgentState, DocumentData, 
     QueryExtractorResponseState, RetrieverNodeState
 )
+from .prompts import multi_query_prompt
 
 from langchain_core.documents import Document
 from langchain_core.language_models import BaseChatModel
@@ -132,5 +133,9 @@ def summarizer_node(state: RetrieverNodeState):
     return Send(node="retriever", arg=state)
 
 # NODE 04: Retrieve Information from database
+retriever = vdb.vectorstore.as_retriever(
+    search_type="similarity_score_threshold",
+    search_kwargs={'score_threshold': 0.6}
+)
 def retriever_node(state: RetrieverNodeState):
     return Send(node="chat_agent", arg={})
