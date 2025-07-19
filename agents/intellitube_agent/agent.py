@@ -125,4 +125,10 @@ def load_document_node(
     )
 
 
-# NODE 03: Retrieve Information from database
+# NODE 03: Summarizer Node
+def summarizer_node(state: RetrieverNodeState):
+    return Send(node="retriever", arg={})
+
+# NODE 04: Retrieve Information from database
+def retriever_node(state: RetrieverNodeState):
+    return Send(node="chat_agent", arg={})
