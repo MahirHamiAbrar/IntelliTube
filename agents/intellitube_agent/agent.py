@@ -4,6 +4,7 @@ from typing_extensions import Literal, Union
 
 from intellitube.utils import ChatManager
 from intellitube.tools import document_loader_tools
+from intellitube.vector_store import VectorStoreManager
 from .states import (
     AgentState, QueryExtractorResponseState, RetrieverNodeState
 )
@@ -22,6 +23,14 @@ chatman = ChatManager.new_chat()
 logger.debug(f"NEW CHAT INITIALIZED. ID: {chatman.chat_id}")
 
 
+# initialize vector store
+vdb = VectorStoreManager(
+    path_on_disk = chatman.chat_dirpath,
+    collection_path_on_disk = Path(chatman.chat_dirpath) / "collection",
+    collection_name = chatman.chat_id,
+)
+
+
 # NODE 01: QUERY EXTRACTOR NODE
 def extract_query(
     user_message: HumanMessage, llm_custom: BaseChatModel = None
@@ -35,8 +44,7 @@ def router_node(state: AgentState) -> AgentState:
     return {"query_extractor_response": extract_query(user_message)}
 
 def select_route(state: AgentState) -> Literal["load_document", "retrieve_documents"]:
-    extractor_response = state.query_extractor_response
-    if not extractor_response.url:
+    if not state.query_extractor_response.url:
         return "retrieve_documents"
     return "load_document"
 
@@ -97,6 +105,16 @@ def load_document_node(
 
     # loading successful; save document info
     loaded_docs[data.url] = [data, docs]
+
+    # save documents in vector store
+    vdb.add_documents(
+        docs, split_text=True,
+        split_config={
+            "chunk_size": 512,
+            "chunk_overlap": 128
+        },
+        skip_if_collection_exists=True,
+    )
     # implement logic for redirection to summarizer llm with new state object
     return Command(
         goto="summarizer",
@@ -105,3 +123,6 @@ def load_document_node(
             document_info=loaded_docs[data.url][0]
         ),
     )
+
+
+# NODE 03: Retrieve Information from database
