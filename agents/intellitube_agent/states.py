@@ -3,7 +3,7 @@ from typing_extensions import (
     Annotated, List, Literal, Optional, Sequence, TypedDict
 )
 
-from langchain_core.documents import Documents
+from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
@@ -39,7 +39,7 @@ class AgentState(BaseModel):
     """Router Agent Response Status"""
 
 class DocumentData(TypedDict):
-    documents: List[Documents]
+    documents: List[Document]
     """Retrieved documents"""
     metadata: QueryExtractorResponseState
     """Document information"""
@@ -60,7 +60,7 @@ class MultiQueryData(BaseModel):
 class RetrieverNodeState(BaseModel):
     query: str
     """The Original User Query"""
-    query_data: MultiQueryData
-    """The user query for retrieval context"""
     data: DocumentData
     """Document information"""
+    query_data: Optional[MultiQueryData] = None
+    """The user query for retrieval context"""
