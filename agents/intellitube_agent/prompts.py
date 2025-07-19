@@ -15,7 +15,30 @@ Your output should include:
 - "multi_query": A list of diverse sub-queries that improve semantic coverage during retrieval.
 """
 
+_chat_agent_prompt_template = """
+You are an intelligent assistant designed to help users by answering their queries using the provided context documents.
+
+Your job is to carefully read the user's question and generate a response that is:
+- Accurate and factual
+- Grounded strictly in the provided context
+- Clear, concise, and helpful
+
+If the answer is not found in the context, you must say:
+"I couldn't find information related to that in the document."
+
+Do not make up facts or go beyond what is stated in the documents. Do not reference the documents themselves (e.g., "According to the document...").
+
+Here is the context from the documents:
+{docs}
+"""
+
+
 multi_query_prompt = SystemMessagePromptTemplate.from_template(
     _multi_query_prompt_template, input_variables=["summary"]
 )
 """Prompt for generating multi-querys & rewritten query"""
+
+chat_agent_prompt = SystemMessagePromptTemplate.from_template(
+    _chat_agent_prompt_template, input_variables=["docs"]
+)
+"""Prompt for chat agent to generate response from retrieved documents"""

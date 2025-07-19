@@ -6,12 +6,13 @@ from intellitube.llm import init_llm
 from intellitube.utils import ChatManager
 from intellitube.tools import document_loader_tools
 from intellitube.vector_store import VectorStoreManager
+from intellitube.utils.path_manager import intellitube_dir
 from intellitube.agents.summarizer_agent import SummarizerAgent
 from .states import (
     AgentState, DocumentData, MultiQueryData,
     QueryExtractorResponseState, RetrieverNodeState
 )
-from .prompts import multi_query_prompt
+from .prompts import chat_agent_prompt, multi_query_prompt
 
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
@@ -21,6 +22,7 @@ from langchain_core.messages import (
 )
 
 from langgraph.types import Command, Send
+from langgraph.graph import StateGraph, START, END
 
 # initialize new LLM
 llm = init_llm(model_provider='google')
@@ -67,7 +69,7 @@ loaded_docs: dict[str, DocumentData] = {}
 
 def load_document_node(
     state: AgentState
-) -> Union[Send[RetrieverNodeState], Command[AgentState, RetrieverNodeState]]:
+) -> Union[Send, Command[AgentState | RetrieverNodeState]]:
     """
     # Load a document from the given URL/Local Path.
 
@@ -128,7 +130,7 @@ def load_document_node(
 
 # NODE 03: Summarizer Node
 summarizer = SummarizerAgent(llm=llm)
-def summarizer_node(state: RetrieverNodeState) -> Send[RetrieverNodeState]:
+def summarizer_node(state: RetrieverNodeState) -> Send:
     summary = summarizer.summarize(documents=state.documents)
     state.data["summary"] = summary
     return Send(node="retriever", arg=state)
@@ -136,7 +138,7 @@ def summarizer_node(state: RetrieverNodeState) -> Send[RetrieverNodeState]:
 # NODE 04: Generate Multi Query & rewrite Query
 def multiquery_gen_node(state: RetrieverNodeState) -> RetrieverNodeState:
     messages = ChatPromptTemplate.from_messages(
-        [multi_query_prompt, state.query_data.query]
+        [multi_query_prompt, state.query]
     )
     structured_llm = llm.with_structured_output(MultiQueryData)
     query_data = structured_llm.invoke(messages.format_messages(summary=state.data["summary"]))
@@ -148,5 +150,70 @@ retriever = vdb.vectorstore.as_retriever(
     search_type="similarity_score_threshold",
     search_kwargs={'score_threshold': 0.6}
 )
-def retriever_node(state: RetrieverNodeState):
-    return Send(node="chat_agent", arg={})
+def retriever_node(state: RetrieverNodeState) -> RetrieverNodeState:
+    docs = retriever.invoke(state.query, k=3)
+    docs.append(retriever.invoke(state.query_data.rewritten_query, k=3))
+    state.retrieved_docs = docs
+    return state
+
+# NODE 06: Chat Agent Node
+def chat_agent_node(state: RetrieverNodeState) -> AgentState:
+    messages = ChatPromptTemplate.from_messages(
+        [chat_agent_prompt, state.query]
+    )
+    docs = "\n\n".join(
+        f"Document {i + 1}:\n" + doc.page_content 
+        for i, doc in enumerate(state.retrieved_docs)
+    )
+    ai_msg: AIMessage = llm.invoke(messages.format_messages(docs=docs))
+    return {"messages": [ai_msg]}
+
+
+# build the graph
+graph = (
+    StateGraph(AgentState)
+
+    # add nodes
+    .add_node("router", router_node)
+    .add_node("document_loader", load_document_node)
+    .add_node("summarizer", summarizer_node)
+    .add_node("multiquery_generator", multiquery_gen_node)
+    .add_node("retriever", retriever_node)
+    .add_node("chat_agent", chat_agent_node)
+    
+    # add_edges
+    .add_edge(START, "router")
+    .add_conditional_edges(
+        "router",
+        select_route,
+        {
+            "load_document": "document_loader",
+            "retrieve_documents": "retriever",
+        }
+    )
+    .add_edge("retriever", "chat_agent")
+    .add_edge("chat_agent", END)
+)
+
+agent = graph.compile()
+
+
+def chat_loop() -> None:
+    print(f"Chat ID: {chatman.chat_id}")
+    usr_msg: str = input(">> ").strip()
+
+    while usr_msg.lower() != "/exit":
+        usr_msg = HumanMessage(usr_msg)
+        chatman.add_message(usr_msg)
+        state = AgentState(messages=chatman.chat_messages)
+        chatman.chat_messages = agent.invoke(state)["messages"]
+        ai_msg: AIMessage = chatman.chat_messages[-1]
+        ai_msg.pretty_print()
+        usr_msg: str = input(">> ").strip()
+    
+    chatman.save_chat()
+    chatman.remove_unlisted_chats()
+
+def test_agent():
+    save_path = Path(intellitube_dir) / "images/intellitube_ai_agent.png"
+    save_path.write_bytes(agent.get_graph().draw_mermaid_png())

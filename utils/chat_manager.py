@@ -152,10 +152,13 @@ class ChatManager:
     
     def __del__(self) -> None:
         """Delete the chat folder if it's empty; save it otherwise."""
-        if not os.listdir(self._chat_dirpath):
-            os.rmdir(self._chat_dirpath)
-        else:
-            self.save_chat()
+        try:
+            if not os.listdir(self._chat_dirpath):
+                os.rmdir(self._chat_dirpath)
+            else:
+                self.save_chat()
+        except Exception as e:
+            logger.error(str(e))
 
     def load_chatlist(self) -> Dict[str, ChatInfo]:
         with open(self._chatlist_filepath, 'r') as chat_list_file:

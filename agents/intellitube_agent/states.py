@@ -64,3 +64,5 @@ class RetrieverNodeState(BaseModel):
     """Document information"""
     query_data: Optional[MultiQueryData] = None
     """The user query for retrieval context"""
+    retrieved_docs: Optional[List[Document]] = None
+    """Retrieved documents"""

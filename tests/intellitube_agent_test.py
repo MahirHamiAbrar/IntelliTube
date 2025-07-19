@@ -1,3 +1,10 @@
+from intellitube.agents.intellitube_agent.agent import test_agent, chat_loop
+# test_agent()
+chat_loop()
+exit(0)
+
+
+
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 
