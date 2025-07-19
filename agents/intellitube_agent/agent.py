@@ -8,12 +8,13 @@ from intellitube.tools import document_loader_tools
 from intellitube.vector_store import VectorStoreManager
 from intellitube.agents.summarizer_agent import SummarizerAgent
 from .states import (
-    AgentState, DocumentData, 
+    AgentState, DocumentData, MultiQueryData,
     QueryExtractorResponseState, RetrieverNodeState
 )
 from .prompts import multi_query_prompt
 
 from langchain_core.documents import Document
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import (
     AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
@@ -127,12 +128,22 @@ def load_document_node(
 
 # NODE 03: Summarizer Node
 summarizer = SummarizerAgent(llm=llm)
-def summarizer_node(state: RetrieverNodeState):
+def summarizer_node(state: RetrieverNodeState) -> Send[RetrieverNodeState]:
     summary = summarizer.summarize(documents=state.documents)
     state.data["summary"] = summary
     return Send(node="retriever", arg=state)
 
-# NODE 04: Retrieve Information from database
+# NODE 04: Generate Multi Query & rewrite Query
+def multiquery_gen_node(state: RetrieverNodeState) -> RetrieverNodeState:
+    messages = ChatPromptTemplate.from_messages(
+        [multi_query_prompt, state.query_data.query]
+    )
+    structured_llm = llm.with_structured_output(MultiQueryData)
+    query_data = structured_llm.invoke(messages.format_messages(summary=state.data["summary"]))
+    state.query_data = query_data
+    return state
+
+# NODE 05: Retrieve Information from database
 retriever = vdb.vectorstore.as_retriever(
     search_type="similarity_score_threshold",
     search_kwargs={'score_threshold': 0.6}

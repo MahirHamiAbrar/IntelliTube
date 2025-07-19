@@ -58,6 +58,8 @@ class MultiQueryData(BaseModel):
     ))
 
 class RetrieverNodeState(BaseModel):
+    query: str
+    """The Original User Query"""
     query_data: MultiQueryData
     """The user query for retrieval context"""
     data: DocumentData
