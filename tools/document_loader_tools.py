@@ -40,13 +40,14 @@ def load_document(document_path: Union[Path, str]) -> Union[Exception, List[Docu
     It is required to answer user-queries based on the the Document context."""
     
     documents: List[Document]
+
     
-    if isinstance(document_path, str):
+    if not isinstance(document_path, Path):
         document_path = Path(document_path)
         
     try:
         logger.debug("Loading Document...")
-        ext = document_path.suffix().lower()
+        ext = document_path.suffix.lower()
 
         if ext == '.pdf':
             documents = PyPDFLoader(document_path).load()
@@ -57,6 +58,8 @@ def load_document(document_path: Union[Path, str]) -> Union[Exception, List[Docu
             )]
         else:
             return Exception(f"Invalid file type: {ext}")
+        
+        print(documents, end='\n\n\n')
     
     except Exception as e:
         logger.error(str(e))

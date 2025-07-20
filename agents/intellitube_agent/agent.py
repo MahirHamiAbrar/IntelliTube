@@ -41,6 +41,8 @@ vdb = VectorStoreManager(
 
 
 # NODE 01: QUERY EXTRACTOR NODE
+
+# helper function
 def extract_query(
     user_message: HumanMessage, llm_custom: BaseChatModel = None
 ) -> QueryExtractorResponseState:
@@ -48,10 +50,12 @@ def extract_query(
     response = structured_llm.invoke([user_message])
     return response
 
+# actual node
 def router_node(state: AgentState) -> AgentState:
     user_message: HumanMessage = state.messages[-1]
     return {"query_extractor_response": extract_query(user_message)}
 
+# select route
 def select_route(state: AgentState) -> Literal["load_document", "retrieve_documents"]:
     if not state.query_extractor_response.url:
         return "retrieve_documents"

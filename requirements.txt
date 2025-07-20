@@ -23,3 +23,5 @@ typing_extensions
 sentence-transformers
 yt_dlp
 pygraphviz
+streamlit
+beautifulsoup4

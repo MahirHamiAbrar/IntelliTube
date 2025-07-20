@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from loguru import logger
 from pydantic import BaseModel, Field
 from typing_extensions import (
@@ -18,11 +19,11 @@ from intellitube.llm import init_llm
 from intellitube.utils import ChatManager
 from intellitube.vector_store import VectorStoreManager
 from intellitube.tools import document_loader_tools
-from intellitube.prompts import (
-    chat_agent_prompts
+from intellitube.agents.chat_agent.prompts import (
+    system_prompt as chat_agent_system_prompt
 )
 
-from data.old_codes import router_agent_prompts
+from intellitube.data.old_codes import router_agent_prompts
 
 
 # initialize chat manager (new chat)
@@ -34,7 +35,7 @@ llm = init_llm(model_provider='google')
 
 
 # initialize rag system
-vectorstore = VectorStoreManager(
+vdb = VectorStoreManager(
     path_on_disk=chat_manager.chat_dirpath,
     collection_path_on_disk=os.path.join(chat_manager.chat_dirpath, "collection"),
     collection_name=chat_manager.chat_id,
@@ -45,13 +46,13 @@ def add_to_vdb(docuemnts: List[Document]) -> None:
     if type(docuemnts) == Document:
         docuemnts = [docuemnts]
     
-    vectorstore.add_documents(
+    vdb.add_documents(
         docuemnts, split_text=True,
         split_config={
             "chunk_size": 512,
             "chunk_overlap": 128
         },
-        skip_if_collection_exists=True,
+        skip_if_collection_exists=False,
     )
 
 # document loader functions
@@ -98,7 +99,8 @@ def router_agent_node(state: AgentState) -> AgentState:
     agent_resp: RouterAgentResponse = structured_llm.invoke(
         messages.format_messages()
     )
-    return {"messages": [HumanMessage(agent_resp.user_query)], "router_response": agent_resp}
+    # return {"messages": [HumanMessage(agent_resp.user_query)], "router_response": agent_resp}
+    return {"router_response": agent_resp}
 
 # query router node
 def query_router_node(state: AgentState) -> Literal["use_loader", "use_retriever"]:
@@ -116,13 +118,14 @@ def document_loader_node(state: AgentState) -> Literal["success", "fail"]:
     return "success"
 
 # retriever node
-RETRIEVER = vectorstore.vectorstore.as_retriever(
+RETRIEVER = vdb.vectorstore.as_retriever(
     search_type="similarity_score_threshold",
-    search_kwargs={'score_threshold': 0.6}
+    search_kwargs={'score_threshold': 0.3}
 )
 
 # document retriever node
 def document_retriever_node(state: AgentState) -> AgentState:
+    print(f'{state["router_response"].user_query = }')
     state["retrieved_docs"] = RETRIEVER.invoke(state["router_response"].user_query)
     print("\n\n\n")
     print(state["retrieved_docs"], end='\n\n')
@@ -139,7 +142,7 @@ def chat_agent_node(state: AgentState) -> AgentState:
     context_source = f" from {state['router_response'].url} {state['router_response'].url_of}"
     
     messages = ChatPromptTemplate.from_messages(
-        [chat_agent_prompts.system_prompt, *state["messages"]]
+        [chat_agent_system_prompt, *state["messages"]]
     )
     ai_msg: AIMessage = llm.invoke(messages.format_messages(
         context=context, context_source=context_source
@@ -186,8 +189,9 @@ graph = (
 )
 
 agent = graph.compile()
-agent.get_graph().draw_png(
-    output_file_path=os.path.join(chat_manager.chat_dirpath, "agent_graph.png")
+graph_save_path = Path(chat_manager.chat_dirpath) / "agent_graph.png"
+graph_save_path.write_bytes(
+    agent.get_graph().draw_mermaid_png()
 )
 
 # the chat function

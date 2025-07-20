@@ -10,6 +10,18 @@ from langchain_core.documents import Document
 from langchain_core.language_models import BaseChatModel
 from langchain_text_splitters import CharacterTextSplitter
 
+"""
+
+what gives life meaning? "https://www.youtube.com/watch?v=UF8uR6Z6KLc"
+
+at what age did he go to college?
+
+what is the economic impacts of climate change? /home/mhabrar/Apps/miniconda3/envs/pyenv/lib/python3.13/intellitube/test_data/dummy_doc.txt
+
+how to install wine? https://wine.htmlvalidator.com/install-wine-on-arch-linux.html
+
+"""
+
 
 def load_document() -> List[str]:
     # load a youtube video
