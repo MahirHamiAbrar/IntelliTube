@@ -1,6 +1,17 @@
 # IntelliTube
 IntelliTube is an intelligent chat system that leverages Retrieval-Augmented Generation (RAG) to help users analyze and discuss content from YouTube videos, documents, and web pages. Built with LangGraph and LangChain, it provides a conversational interface for exploring multimedia content through natural language - made for students, researchers and educators.
 
+<summary>
+Here is a working video demo of IntelliTube:
+
+<details>
+
+[![intellitube_v1_video_demo](images/intellitube_v1/homepage.png)](images/intellitube_v1/working_demo.mp4)
+
+</details>
+
+</summary>
+
 ## Features
  - **YouTube Videos**: Automatically extracts and processes video transcripts
  - **Web Pages**: Loads and analyzes website content
@@ -106,3 +117,9 @@ streamlit run ui.py
 You should see a page opening in your default browser that looks like this:
 
 ![intellitube_v1_homepage.png](images/intellitube_v1/homepage.png)
+
+If it doesn't show up for some reason, just open a browser and copy-paste this URL: (default localhost url for streamlit apps)
+
+```bash
+http://localhost:8501
+```
