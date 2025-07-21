@@ -6,7 +6,7 @@ Here is a working video demo of IntelliTube:
 
 <details>
 
-[![intellitube_v1_video_demo](images/intellitube_v1/homepage.png)](images/intellitube_v1/working_demo.mp4)
+[![intellitube_v1_video_demo](images/intellitube_v1/homepage.png)](https://youtu.be/Z484SG5ymYc)
 
 </details>
 
