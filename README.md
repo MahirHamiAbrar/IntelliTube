@@ -1,9 +1,25 @@
 # IntelliTube
-A smart conversational AI tool to summarize audio, video, documents and perform question answering based on the provided knwoledge-base - made for students, researchers and educators.
+IntelliTube is an intelligent chat system that leverages Retrieval-Augmented Generation (RAG) to help users analyze and discuss content from YouTube videos, documents, and web pages. Built with LangGraph and LangChain, it provides a conversational interface for exploring multimedia content through natural language - made for students, researchers and educators.
 
-IntelliTube is a multi-agent system. The agents are listed below:
+## Features
+ - **YouTube Videos**: Automatically extracts and processes video transcripts
+ - **Web Pages**: Loads and analyzes website content
+ - **Documents**: Supports PDF, TXT, and Python files
+ - **Intelligent Routing**: Automatically determines content type and processing method
+ - **Persistent Chat History**: Save and resume conversations across sessions
+
+## Agents
+IntelliTube is a multi-agent system. The full system is based on multiple agents, such as -
+ - **Summarizer Agent**: Summarizes given document(s) using map-reduce summarization technique.
+ - **Router Agent**: Detects URLs and Local document paths and routes the user query either to a document loader or directly to a retriever to retrieve documents from vector database.
+ - **Chat Agent**: Processes the user query & retrieved documents and generates an answer to respond to the user query.
+
+The workflow of IntelliTube AI looks something like this:
+
+<p align="center"><img src="images/main_agent_graph.png" height="auto" width="200" style="border-radius:10%"></p>
+
 
 ### [Summarizer Agent](agents/summrizer_agent.py)
-Summarizer agent (built using LangGraph) provides a qualityful summary of a given document. The graph of this agent looks something like below:
+Summarizer agent provides a qualityful summary of a given document. The graph of this agent looks something like below:
 
-<img src="images/summarizer_agent_graph.png" height="auto" width="200" style="border-radius:10%">
+<p align="center"><img src="images/summarizer_agent_graph.png" height="auto" width="200" style="border-radius:10%"></p>
