@@ -58,7 +58,7 @@ intellitube
 ├── tests
 │   ├── ...
 ├── tools
-│   ├── document_loader_tools.py    # YouTube transcript/text document/webpage loader tools
+│   ├── document_loader_tools.py    # YouTube transcript/text-document/webpage loader tools
 │   └── __init__.py
 ├── ui.py   # the streamlit frontend UI
 ├── utils
@@ -71,3 +71,38 @@ intellitube
 │   └── youtube.py
 └── vector_store.py # manages the qdrant vector database
 ```
+
+## Quick Start
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/MahirHamiAbrar/intellitube.git
+cd intellitube
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### Setup Environment Variables
+
+Create a `.env` file in the root directory (under `intellitube/`) and populate it with the following content:
+
+```bash
+GOOGLE_API_KEY=your-api-key
+GROQ_API_KEY=your-api-key
+NVIDIA_API_KEY=your-api-key
+```
+
+### Running the App
+
+Finally when you're ready, just type this command while you're in the root directory (under `intellitube/` folder) and hit enter!
+
+```bash
+streamlit run ui.py
+```
+
+You should see a page opening in your default browser that looks like this:
+
+![intellitube_v1_homepage.png](images/intellitube_v1/homepage.png)
