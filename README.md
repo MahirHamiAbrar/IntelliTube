@@ -6,9 +6,7 @@ IntelliTube is an intelligent chat system that leverages Retrieval-Augmented Gen
 Click to expand!
 <details>
 
-<!-- ![Vide Demo](https://youtu.be/Z484SG5ymYc) -->
-
-<iframe width="560" height="315" src="https://www.youtube.com/embed/Z484SG5ymYc?si=JQ6UWp8kYK-i5IvI" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+[![Vide Demo](images/intellitube_v1/homepage.png)](https://youtu.be/Z484SG5ymYc?si=KO86iOwNULbY8TW4)
 
 </details>
 
