@@ -43,11 +43,19 @@ class StreamlitUI:
         st.session_state.agent = ai_agent
         st.session_state.chat_id = chat_manager.chat_id
 
-    def setup_page(self) -> None:
+        # initialize session state for backend loading
+        if "backend_loaded" not in st.session_state:
+            st.session_state.backend_loaded = False
+            st.session_state.chat_messages = []
+
+    def launch(self) -> None:
         st.set_page_config(**self.page_config)
         st.title("🤖 IntelliTube Chat Assistant")
+
+        self.show_loading_screen()
+        self.show_chat_screen()
     
-    def init_page(self) -> None:
+    def show_loading_screen(self) -> None:
         # create a placeholder for loading content
         with st.empty().container() as loading_container:
             st.info("🔄 Initializing IntelliTube backend...")
@@ -81,7 +89,7 @@ class StreamlitUI:
                 st.error(f"❌ Failed to load IntelliTube backend: {str(e)}")
                 st.stop()
     
-    def chat_page(self) -> None:
+    def show_chat_screen(self) -> None:
         # app header
         st.title("🤖 IntelliTube Chat Assistant")
         st.caption(f"Chat ID: {self.chat_id}")
