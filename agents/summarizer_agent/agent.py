@@ -105,7 +105,7 @@ class SummarizerAgent(BaseAgent):
         graph = (
             StateGraph(SummarizerAgentState)
             # add nodes
-            .add_node("generate_summary", self.generate_summary)  # same as before
+            .add_node("generate_summary", self.generate_summary)
             .add_node("collect_summaries", self.collect_summaries)
             .add_node("collapse_summaries", self.collapse_summaries)
             .add_node("generate_final_summary", self.generate_final_summary)

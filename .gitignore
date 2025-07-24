@@ -1,7 +1,8 @@
 __pycache__
+.idea
 test_data
 .env
 .directory
 .ipynb_checkpoints
 agents/rag_agent
-agents/intellitube_agent
+intellitube_agent
