@@ -1,12 +1,11 @@
 """Create and maintain chat history"""
-import os
 import json
 import uuid
 import shutil
 from pathlib import Path
 from loguru import logger
 from datetime import datetime
-from typing_extensions import Any, List, Dict, TypedDict, Optional
+from typing_extensions import Any, List, Dict, TypedDict, Optional, Union
 
 from pydantic import BaseModel
 from langchain_core.messages import BaseMessage
@@ -30,28 +29,38 @@ class ChatManager:
     
     _chat_filename: str = "chat_messages.json"
     _chatlist_filename: str = "chatlist.json"
-    _chatlist_filepath: str = None
+    _chatlist_filepath: Path = None
     
-    _chat_dirpath: str = None
-    _chat_filepath: str = None
+    _chat_dirpath: Path = None
+    _chat_filepath: Path = None
 
     _chat: Chat = Chat(messages=[])
     _chat_list: Dict[str, ChatInfo] = {}
     
     @property
-    def root_dir(self) -> str:
+    def root_dir(self) -> Path:
+        if not isinstance(self._root_dir, Path):
+            self._root_dir = Path(self._root_dir)
         return self._root_dir
     
     @root_dir.setter
-    def root_dir(self, path: str) -> None:
-        os.makedirs(os.path.join(path, self._chats_dir), exist_ok=True)
+    def root_dir(self, path: Union[Path, str]) -> None:
+        if not isinstance(path, Path):
+            path = Path(path)
+        
+        # create the folder along with the parent directories if they dont exist already
+        dirpath = path / self.chats_dir
+        dirpath.mkdir(parents=True, exist_ok=True)
+        
+        # set the paths
         self._root_dir = path
-        self._chatlist_filepath = os.path.join(self._root_dir, self._chatlist_filename)
+        self._chatlist_filepath = self.root_dir / self.chatlist_filename
         
         # create `chat_list.json` if it does not exist already
-        if not os.path.exists(self._chatlist_filepath):
-            with open(self._chatlist_filepath, 'w') as chat_list_file:
-                json.dump(self._chat_list, chat_list_file)
+        if not self.chatlist_filepath.exists():
+            self.chatlist_filepath.write_text(
+                json.dumps(self._chat_list, indent=4)
+            )
     
     @property
     def chats_dir(self) -> str:
@@ -72,24 +81,21 @@ class ChatManager:
         return self._chatlist_filename
     
     @property
-    def chatlist_filepath(self) -> str:
+    def chatlist_filepath(self) -> Path:
+        if not isinstance(self._chatlist_filepath, Path):
+            self._chatlist_filepath = Path(self._chatlist_filepath)
         return self._chatlist_filepath
     
     @property
     def chat_dirpath(self) -> Path:
         if not self._chat_dirpath:
-            self._chat_dirpath = Path()
-            self._chat_dirpath = os.path.join(
-                self.root_dir, self.chats_dir, self.chat_id
-            )
+            self._chat_dirpath = self.root_dir / self.chats_dir / self.chat_id
         return self._chat_dirpath
     
     @property
-    def chat_filepath(self) -> str:
+    def chat_filepath(self) -> Path:
         if not self._chat_filepath:
-            self._chat_filepath = os.path.join(
-                self.chat_dirpath, self.chat_filename
-            )
+            self._chat_filepath = self.chat_dirpath / self.chat_filename
         return self._chat_filepath
     
     @property
@@ -118,7 +124,7 @@ class ChatManager:
             raise ValueError(f"Given chat_id={_manager.chat_id} already exists. Please provide an unique chat id.")
 
         # create the folers
-        os.makedirs(_manager.chat_dirpath, exist_ok=True)
+        _manager.chat_dirpath.mkdir(parents=True, exist_ok=True)
         
         _dt_now_ts = datetime.timestamp(datetime.now())
         _manager.chatlist[_manager.chat_id] = ChatInfo(
@@ -155,8 +161,8 @@ class ChatManager:
     def __del__(self) -> None:
         """Delete the chat folder if it's empty; save it otherwise."""
         try:
-            if not os.listdir(self._chat_dirpath):
-                os.rmdir(self._chat_dirpath)
+            if not list(self.chat_dirpath.iterdir()):
+                self.chat_dirpath.rmdir()
             else:
                 self.save_chat()
         except Exception as e:
@@ -174,8 +180,8 @@ class ChatManager:
         with open(self._chatlist_filepath, 'w') as chat_list_file:
             json.dump(self._chat_list, chat_list_file, indent=4)
     
-    def get_chat_dirpath(self, chat_id: str) -> str:
-        return os.path.join(self.root_dir, self.chats_dir, chat_id, self.chat_filename)
+    def get_chat_dirpath(self, chat_id: str) -> Path:
+        return self.root_dir / self.chats_dir / chat_id / self.chat_filename
 
     def _save_chat(self, indent: int = 4) -> None:
         with open(self.get_chat_dirpath(self._chat_id), 'w') as chat_file:
@@ -205,16 +211,16 @@ class ChatManager:
             excluded_ids (Optional[List[str]], optional): List of ids to exclude that are not in `chatlist.json`. Defaults to None.
         """
         
-        chats_dirpath = os.path.join(self.root_dir, self.chats_dir)
-        chat_ids = set(os.listdir(chats_dirpath))
+        chats_dirpath = self.root_dir / self.chats_dir
+        chat_ids = set(chats_dirpath.iterdir())
         excluded_ids = set((excluded_ids or []) + [self.chat_id] + list(self.chatlist.keys()))
 
         for chat_id in list((chat_ids - excluded_ids) | (excluded_ids - chat_ids)):
             try:
                 logger.warning(f"Removing Unlisted Chat: {chat_id}")
-                path = os.path.join(chats_dirpath, chat_id)
+                path: Path = chats_dirpath / chat_id
                 # Failsafe: what if the path does not exist?
-                if not os.path.exists(path):
+                if path.exists():
                     logger.error(f"Chat: {chat_id} is non-existent!")
                     continue
                 shutil.rmtree(path)
