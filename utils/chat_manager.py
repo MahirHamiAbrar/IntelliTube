@@ -147,7 +147,7 @@ class ChatManager:
         return _manager
     
     def __init__(self,
-        root_dir: Optional[str] = None,
+        root_dir: Optional[Union[Path, str]] = None,
         chat_id: Optional[str] = None,
         chatlist: Optional[Dict[str, ChatInfo]] = None,
         chat: Optional[Chat] = None
