@@ -1,12 +1,18 @@
+import os
 import streamlit as st
+from typing import Callable, Optional, Union
+
 from langgraph.graph.state import CompiledStateGraph
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
+from intellitube.llm import init_llm
 from intellitube.utils import ChatManager
+from intellitube.vector_store import VectorStoreManager
 from intellitube.agents.main_agent import IntelliTubeAI
 
 
 class StreamlitUI:
+    _init_function: Callable[[], Union[ChatManager, IntelliTubeAI]]
     page_config: dict[str, str] = {
         "page_title": "IntelliTube Chat",
         "page_icon": "🤖",
@@ -35,29 +41,59 @@ class StreamlitUI:
         self.chat_manager.chat_messages = messages
 
     def __init__(self,
-        chat_manager: ChatManager,
-        ai_agent: IntelliTubeAI,
+        init_function: Optional[Callable] = None,
     ) -> None:
-        # Store in session state
-        st.session_state.chat_manager = chat_manager
-        st.session_state.agent = ai_agent
-        st.session_state.chat_id = chat_manager.chat_id
+        self._init_function = init_function
 
         # initialize session state for backend loading
         if "backend_loaded" not in st.session_state:
             st.session_state.backend_loaded = False
             st.session_state.chat_messages = []
+    
+    def _do_preprocesing(self) -> None:
+        chatman: ChatManager
+        ai_agent: IntelliTubeAI
+
+        if callable(self._init_function):
+            chatman, ai_agent = self._init_function()
+        else:
+            # initialize an llm
+            llm = init_llm(model_provider='google')
+
+            # initialize the chat manager
+            chatman = ChatManager.new_chat()
+
+            # initialize vector store
+            vsman = VectorStoreManager(
+                path_on_disk=chatman.chat_dirpath,
+                collection_path_on_disk=os.path.join(chatman.chat_dirpath, "collection"),
+                collection_name=chatman.chat_id,
+            )
+
+            # initialize the agent
+            ai_agent = IntelliTubeAI(
+                llm=llm, chat_manager=chatman,
+                vector_store_manager=vsman,
+            )
+
+        # Store in session state
+        st.session_state.chat_manager = chatman
+        st.session_state.agent = ai_agent.agent
+        st.session_state.chat_id = chatman.chat_id
 
     def launch(self) -> None:
         st.set_page_config(**self.page_config)
         st.title("🤖 IntelliTube Chat Assistant")
 
-        self.show_loading_screen()
-        self.show_chat_screen()
+        if not st.session_state.backend_loaded:
+            self.show_loading_screen()
+        else:
+            self.show_chat_screen()
     
     def show_loading_screen(self) -> None:
         # create a placeholder for loading content
-        with st.empty().container() as loading_container:
+        loading_container = st.empty()
+        with loading_container.container():
             st.info("🔄 Initializing IntelliTube backend...")
 
             progress_bar = st.progress(0)   # progress bar
@@ -69,6 +105,9 @@ class StreamlitUI:
                 # import the backend components (this is where the loading happens)
                 status_text.text("Importing IntelliTube components...")
                 progress_bar.progress(50)
+
+                # do the preprocessing
+                self._do_preprocesing() # faking the progress for now XD
                 
                 progress_bar.progress(80)
                 status_text.text("Finalizing initialization...")

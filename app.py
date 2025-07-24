@@ -1,3 +1,5 @@
+import os
+from typing import Union
 from intellitube.llm import init_llm
 from intellitube.utils import ChatManager
 from intellitube.vector_store import VectorStoreManager
@@ -6,7 +8,7 @@ from intellitube.ui.streamlit_ui import StreamlitUI
 from intellitube.agents.main_agent import IntelliTubeAI
 
 
-def run_app() -> None:
+def init_function() -> Union[ChatManager, IntelliTubeAI]:
     # initialize an llm
     llm = init_llm(model_provider='google')
     
@@ -14,7 +16,11 @@ def run_app() -> None:
     chatman = ChatManager.new_chat()
     
     # initialize vector store
-    vsman = VectorStoreManager()
+    vsman = VectorStoreManager(
+        path_on_disk=chatman.chat_dirpath,
+        collection_path_on_disk=os.path.join(chatman.chat_dirpath, "collection"),
+        collection_name=chatman.chat_id,
+    )
 
     # initialize the agent
     ai_agent = IntelliTubeAI(
@@ -22,10 +28,13 @@ def run_app() -> None:
         vector_store_manager=vsman,
     )
 
+    # ai_agent.cli_chat_loop()
+    return chatman, ai_agent
+
+def run_app() -> None:
     # initialize the UI
-    ui = StreamlitUI(
-        chat_manager=chatman, ai_agent=ai_agent
-    )
+    # ui = StreamlitUI(init_function=init_function)
+    ui = StreamlitUI()
     ui.launch()
 
 

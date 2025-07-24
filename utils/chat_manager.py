@@ -3,6 +3,7 @@ import os
 import json
 import uuid
 import shutil
+from pathlib import Path
 from loguru import logger
 from datetime import datetime
 from typing_extensions import Any, List, Dict, TypedDict, Optional
@@ -23,7 +24,7 @@ class Chat(BaseModel):
 
 
 class ChatManager:
-    _root_dir: str = "test_data/chat_history"
+    _root_dir: Path = Path("test_data/chat_history")
     _chats_dir: str = "chats"   # container of: chat-messages + vector-database
     _chat_id: str = ""
     
@@ -75,8 +76,9 @@ class ChatManager:
         return self._chatlist_filepath
     
     @property
-    def chat_dirpath(self) -> str:
+    def chat_dirpath(self) -> Path:
         if not self._chat_dirpath:
+            self._chat_dirpath = Path()
             self._chat_dirpath = os.path.join(
                 self.root_dir, self.chats_dir, self.chat_id
             )

@@ -25,7 +25,7 @@ from langchain_core.vectorstores import VectorStoreRetriever
 class IntelliTubeAI(BaseAgent):
     _chat_manager: ChatManager
     _vdb: VectorStoreManager
-    _retriever: VectorStoreRetriever
+    _retriever: VectorStoreRetriever = None
     _similarity_score_threshold: float = 0.6
 
     document_loader_functions = {

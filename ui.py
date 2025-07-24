@@ -1,6 +1,8 @@
 import streamlit as st
 from langchain_core.messages import HumanMessage, AIMessage
 
+
+
 # Page config
 st.set_page_config(
     page_title="IntelliTube Chat",
@@ -36,16 +38,45 @@ if not st.session_state.backend_loaded:
             status_text.text("Importing IntelliTube components...")
             progress_bar.progress(50)
             
-            from intellitube.data.old_codes.intellitube_ai_draft import (
-                chat_manager, agent
-            )
+            # from intellitube.data.old_codes.intellitube_ai_draft import (
+            #     chat_manager, agent
+            # )
+
+            def init_ai() -> None:
+                import os
+                from intellitube.llm import init_llm
+                from intellitube.utils import ChatManager
+                from intellitube.vector_store import VectorStoreManager
+                from intellitube.agents.main_agent import IntelliTubeAI
+
+                # initialize an llm
+                llm = init_llm(model_provider='google')
+                
+                # initialize the chat manager
+                chatman = ChatManager.new_chat()
+                
+                # initialize vector store
+                vsman = VectorStoreManager(
+                    path_on_disk=chatman.chat_dirpath,
+                    collection_path_on_disk=os.path.join(chatman.chat_dirpath, "collection"),
+                    collection_name=chatman.chat_id,
+                )
+
+                # initialize the agent
+                ai_agent = IntelliTubeAI(
+                    llm=llm, chat_manager=chatman,
+                    vector_store_manager=vsman,
+                )
+
+                return chatman, ai_agent
+            chat_manager, ai_agent = init_ai()
             
             progress_bar.progress(80)
             status_text.text("Finalizing initialization...")
             
             # Store in session state
             st.session_state.chat_manager = chat_manager
-            st.session_state.agent = agent
+            st.session_state.agent = ai_agent.agent
             st.session_state.chat_id = chat_manager.chat_id
             st.session_state.backend_loaded = True
             
@@ -70,7 +101,7 @@ if not st.session_state.backend_loaded:
 else:
     # Get components from session state
     chat_manager = st.session_state.chat_manager
-    agent = st.session_state.agent
+    ai_agent = st.session_state.agent
     
     # App header
     st.title("🤖 IntelliTube Chat Assistant")
@@ -163,7 +194,7 @@ else:
                 chat_manager.add_message(usr_msg)
                 
                 # Get agent response
-                result = agent.invoke({"messages": chat_manager.chat_messages})
+                result = ai_agent.invoke({"messages": chat_manager.chat_messages})
                 chat_manager.chat_messages = result["messages"]
                 
                 # Get the AI response
