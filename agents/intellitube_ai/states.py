@@ -1,6 +1,7 @@
-from typing_extensions import Annotated, Literal, Optional, TypedDict
+from langchain_core.documents import Document
+from typing_extensions import Annotated, List, Literal, Optional, TypedDict
 
-class QueryExtractorState(TypedDict):
+class QueryExtractorData(TypedDict):
     instruction: Annotated[str, ..., (
         "The user's instruction quoted word-for-word with any URLs or Paths removed.\n"
         "Preserve the casing, punctuation, and wording. Do NOT fix typos or grammar."
@@ -26,3 +27,7 @@ class QueryExtractorState(TypedDict):
         "- 'document': for file paths (like .txt, .pdf, .md, etc.)\n"
         "If no URL/path is provided, this should be null."
     )] = None
+
+
+class SummarizerAgentState(TypedDict):
+    documents: List[Document]

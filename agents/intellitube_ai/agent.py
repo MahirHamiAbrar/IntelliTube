@@ -7,7 +7,7 @@ from intellitube.tools import document_loader_tools
 from intellitube.vector_store import VectorStoreManager
 from intellitube.utils.path_manager import intellitube_dir
 from intellitube.agents.summarizer_agent import SummarizerAgent
-from .states import QueryExtractorState
+from .states import SummarizerAgentState, QueryExtractorData
 # from .prompts import chat_agent_prompt, multi_query_prompt
 
 from langchain_core.documents import Document
@@ -22,30 +22,135 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import MessagesState
 
 # ======================== INIT ========================
-# initialize new LLM
-llm = init_llm(model_provider='google', model_name='gemini-2.5-flash')
+INIT = False
 
-# initialize new chat
-chatman = ChatManager.new_chat()
-logger.debug(f"NEW CHAT INITIALIZED. ID: {chatman.chat_id}")
+if INIT:
+    # initialize new LLM
+    llm = init_llm(model_provider='google', model_name='gemini-2.5-flash')
 
-# initialize vector store
-vdb = VectorStoreManager(
-    path_on_disk = chatman.chat_dirpath,
-    collection_path_on_disk = chatman.chat_dirpath / "collection",
-    collection_name = chatman.chat_id,
-)
+    # initialize new chat
+    chatman = ChatManager.new_chat()
+    logger.debug(f"NEW CHAT INITIALIZED. ID: {chatman.chat_id}")
+
+    # initialize vector store
+    vdb = VectorStoreManager(
+        path_on_disk = chatman.chat_dirpath,
+        collection_path_on_disk = chatman.chat_dirpath / "collection",
+        collection_name = chatman.chat_id,
+    )
 
 
 # ======================== INIT ========================
 
 # ------------- NODE 01: QUERY EXTRACTOR NODE -------------
 
-def extract_and_route_query(state: MessagesState) -> MessagesState:
-    structured_llm = llm.with_structured_output(QueryExtractorState)
-    data = structured_llm.invoke([state['messages'][-1]])
+def extract_and_route_query(
+    state: MessagesState
+) -> Literal["load_document", "retriever"]:
+    """Take the user query, fetch the URL from it and then redirect it 
+    either to the document loader node or to the retriever node."""
+
+    structured_llm = llm.with_structured_output(QueryExtractorData)
+    data: QueryExtractorData = structured_llm.invoke([state['messages'][-1]])
     print(data)
-    return state
+
+    if not data["url"]:
+        return Send("load_document", {**data, **state})
+    return Send("retriever", data)
+
+
+# ------------- NODE 02: DOCUMENT LOADER NODE -------------
+loaded_docs: dict[str, QueryExtractorData] = {}
+
+document_loader_functions = {
+    "document": document_loader_tools.load_document,
+    "youtube_video": document_loader_tools.load_youtube_transcript,
+    "website": document_loader_tools.load_webpage
+}
+
+def load_document_node(
+    data: QueryExtractorData
+):
+    """
+    # Load a document from the given URL/Local Path.
+
+    How it works:
+         1. Already Loaded?
+           1. YES? [GO TO RETRIEVER]
+           2. NO? [GO TO STEP 2]
+         2. Try to load it
+           1. Error Loading: Return ToolMessage("Error") to Chat LLM
+           2. Successful Loading: [GO TO SUMMARIZER LLM]
+    """
+
+    # 1. ALREADY LOADED?
+    if data["url"] in loaded_docs:
+        # update the state and redirect to the retriever node
+        return Send("retrieve_documents", data)
+
+    # 2. Try to load it
+    func = document_loader_functions.get(data["urlof"], None)
+    if not func:
+        # state update + redirection to the chat_agent node (with err msg)
+        return Command(
+            goto="generate_answer",
+            update={"messages": [ToolMessage("Error Loading Document. Invalid Function Call from LLM!")]},
+        )
+
+    docs: Union[Exception, Document] = func(data["url"])
+    # check for error
+    if isinstance(docs, Exception):
+        # state update + redirection to the chat_agent node (with err msg)
+        return Command(
+            goto="generate_answer",
+            update={"messages": [ToolMessage(f"Error Loading Document. Error Details: {str(docs)}")]}, 
+        )
+
+    # loading successful; save document info
+    # save everything except the messages, it'll besaved elsewhere
+    loaded_docs[data["url"]] = {k: data[k] for k in data.keys() - {'messages'}}
+    logger.info("Adding document to vector database ...")
+    # save documents in vector store
+    vdb.add_documents(
+        docs, split_text=True,
+        split_config={
+            "chunk_size": 512,
+            "chunk_overlap": 128
+        },
+        skip_if_collection_exists=True,
+    )
+    # implement logic for redirection to summarizer llm with new state object
+    return Send("summarize_content", {**data, "documents": docs})
+
+
+# ------------- NODE 03: RETRIEVE INFORMATION FROM DATABASE -------------
+def retriever_node(
+    data: QueryExtractorData
+):
+    pass
+
+
+# ------------- NODE 04: SUMMARIZER NODE -------------
+summarizer: SummarizerAgent = None # SummarizerAgent(llm=llm)
+def summarizer_node(state: SummarizerAgentState) -> Send:
+    summary = summarizer.summarize(documents=state.documents)
+    state.data["summary"] = summary
+    return Send("retriever", state)
+
+
+# ------------- NODE 05: CHAT AGENT NODE -------------
+# NODE 05: Chat Agent Node
+def chat_agent_node(state: MessagesState) -> MessagesState:
+    messages = ChatPromptTemplate.from_messages(
+        [chat_agent_prompt, state.query]
+    )
+    docs = "\n\n".join(
+        f"Document {i + 1}:\n" + doc.page_content 
+        for i, doc in enumerate(state.retrieved_docs)
+    )
+    ai_msg: AIMessage = llm.invoke(messages.format_messages(docs=docs))
+    return {"messages": [ai_msg]}
+
 
 
 # ======================== GRAPH ========================
@@ -53,11 +158,27 @@ graph = (
     StateGraph(MessagesState)
     
     # add nodes
-    .add_node("query_router", extract_and_route_query)
+    .add_node("query_router", lambda state: state)  # just for show in the png graph
+    .add_node("load_document", lambda state: state) # pass through
+    .add_node("summarizer", summarizer_node)
+    .add_node("chat_agent", chat_agent_node)
+    .add_node("retriever", retriever_node)
 
     # add edges
     .add_edge(START, "query_router")
-    .add_edge("query_router", END)
+    .add_conditional_edges(
+        "query_router", extract_and_route_query, ["load_document", "retriever"]
+    )
+    .add_conditional_edges(
+        "load_document", load_document_node, {
+            "generate_answer": "chat_agent",
+            "summarize_content": "summarizer",
+            "retrieve_documents": "retriever"
+        }
+    )
+    .add_edge("summarizer", "retriever")
+    .add_edge("retriever", "chat_agent")
+    .add_edge("chat_agent", END)
 )
 
 agent = graph.compile()
