@@ -1,5 +1,5 @@
 from loguru import logger
-from typing_extensions import Literal, Union
+from typing_extensions import Any, Dict, Literal, Union
 
 from intellitube.llm import init_llm
 from intellitube.utils import ChatManager
@@ -8,7 +8,7 @@ from intellitube.vector_store import VectorStoreManager
 from intellitube.utils.path_manager import intellitube_dir
 from intellitube.agents.summarizer_agent import SummarizerAgent
 from .states import SummarizerAgentState, QueryExtractorData
-# from .prompts import chat_agent_prompt, multi_query_prompt
+from .prompts import chat_agent_prompt, multi_query_prompt
 
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
@@ -22,7 +22,11 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import MessagesState
 
 # ======================== INIT ========================
-INIT = False
+INIT = True
+
+llm: BaseChatModel = None
+chatman: ChatManager = None
+vdb: VectorStoreManager = None
 
 if INIT:
     # initialize new LLM
@@ -70,7 +74,7 @@ document_loader_functions = {
 
 def load_document_node(
     data: QueryExtractorData
-):
+) -> Union[Send, Command[Dict[str, Any]]]:
     """
     # Load a document from the given URL/Local Path.
 
@@ -94,7 +98,9 @@ def load_document_node(
         # state update + redirection to the chat_agent node (with err msg)
         return Command(
             goto="generate_answer",
-            update={"messages": [ToolMessage("Error Loading Document. Invalid Function Call from LLM!")]},
+            update={"messages": [
+                ToolMessage("Error Loading Document. Invalid Function Call from LLM!", tool_call_id='')
+            ]},
         )
 
     docs: Union[Exception, Document] = func(data["url"])
@@ -103,7 +109,7 @@ def load_document_node(
         # state update + redirection to the chat_agent node (with err msg)
         return Command(
             goto="generate_answer",
-            update={"messages": [ToolMessage(f"Error Loading Document. Error Details: {str(docs)}")]}, 
+            update={"messages": [ToolMessage(f"Error Loading Document. Error Details: {str(docs)}", tool_call_id='')]}, 
         )
 
     # loading successful; save document info
@@ -123,32 +129,53 @@ def load_document_node(
     return Send("summarize_content", {**data, "documents": docs})
 
 
-# ------------- NODE 03: RETRIEVE INFORMATION FROM DATABASE -------------
-def retriever_node(
-    data: QueryExtractorData
-):
-    pass
-
-
-# ------------- NODE 04: SUMMARIZER NODE -------------
-summarizer: SummarizerAgent = None # SummarizerAgent(llm=llm)
+# ------------- NODE 03: SUMMARIZER NODE -------------
+summarizer: SummarizerAgent = None
 def summarizer_node(state: SummarizerAgentState) -> Send:
+    global summarizer
+    if not summarizer:
+        summarizer = SummarizerAgent(llm=llm)
+
     summary = summarizer.summarize(documents=state.documents)
     state.data["summary"] = summary
     return Send("retriever", state)
+
+
+# ------------- NODE 04: RETRIEVE INFORMATION FROM DATABASE -------------
+retriever = vdb.vectorstore.as_retriever(
+    search_type="similarity_score_threshold",
+    search_kwargs={'score_threshold': 0.6}
+)
+
+def retriever_node(
+    data: QueryExtractorData
+) -> Dict[str, Any]:
+    docs = retriever.invoke(data["instruction"], k=3)
+    # docs.append(retriever.invoke(state.query_data.rewritten_query, k=3))
+
+    docs_prompt = "\n\n".join(
+        (
+            f"Document {i + 1}: {doc.page_content}\n"
+            f"Document {i + 1} metadata: "
+            ' '.join(f'{k}: {v};' for k, v in doc.metadata.items())
+        )
+        for i, doc in enumerate(docs)
+    )
+    # return {**data, "retrieved_documents": docs}
+    return {"messages": [ToolMessage(content=docs_prompt, tool_call_id="")]}
 
 
 # ------------- NODE 05: CHAT AGENT NODE -------------
 # NODE 05: Chat Agent Node
 def chat_agent_node(state: MessagesState) -> MessagesState:
     messages = ChatPromptTemplate.from_messages(
-        [chat_agent_prompt, state.query]
+        [chat_agent_prompt, *state["messages"]]
     )
-    docs = "\n\n".join(
-        f"Document {i + 1}:\n" + doc.page_content 
-        for i, doc in enumerate(state.retrieved_docs)
-    )
-    ai_msg: AIMessage = llm.invoke(messages.format_messages(docs=docs))
+    # docs = "\n\n".join(
+    #     f"Document {i + 1}:\n" + doc.page_content 
+    #     for i, doc in enumerate(state.retrieved_docs)
+    # )
+    ai_msg: AIMessage = llm.invoke(messages.format_messages())
     return {"messages": [ai_msg]}
 
 
@@ -192,3 +219,21 @@ def test_intellitube_ai() -> None:
         "messages": [HumanMessage("What is this website about? https://wikipedia.org")]
     })
     print(resp)
+
+def chat_loop() -> None:
+    print(f"Chat ID: {chatman.chat_id}")
+    usr_msg: str = input(">> ").strip()
+
+    while usr_msg.lower() != "/exit":
+        usr_msg = HumanMessage(usr_msg)
+        chatman.add_message(usr_msg)
+        
+        state = MessagesState(messages=chatman.chat_messages)
+        chatman.chat_messages = agent.invoke(state)["messages"]
+        
+        ai_msg: AIMessage = chatman.chat_messages[-1]
+        ai_msg.pretty_print()
+        usr_msg: str = input(">> ").strip()
+    
+    chatman.save_chat()
+    chatman.remove_unlisted_chats()
