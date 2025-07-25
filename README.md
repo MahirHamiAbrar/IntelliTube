@@ -123,3 +123,9 @@ If it doesn't show up for some reason, just open a browser and copy-paste this U
 ```bash
 http://localhost:8501
 ```
+
+### What's Next?
+
+Current version of IntelliTube isn't very good at tricky questions and might generate irrelevant response for certain queries. That's why I've been working on a newer version of this agent which overcomes these limitations by following more advance architecture and retrieval techniques. Currently this agent graph architecture looks something like this:
+
+![Intellitube AI Graph](images/intellitube_ai_graph.png)
