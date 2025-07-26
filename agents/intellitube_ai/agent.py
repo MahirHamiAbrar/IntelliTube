@@ -1,5 +1,5 @@
 from loguru import logger
-from typing_extensions import Any, Dict, Literal, Union
+from typing_extensions import Any, Dict, List, Literal, Union
 
 from intellitube.llm import init_llm
 from intellitube.utils import ChatManager
@@ -123,7 +123,7 @@ def load_document_node(
             "chunk_size": 512,
             "chunk_overlap": 128
         },
-        skip_if_collection_exists=True,
+        skip_if_collection_exists=False,
     )
     # implement logic for redirection to summarizer llm with new state object
     return Send("summarize_content", {**data, "documents": docs})
@@ -161,6 +161,8 @@ def retriever_node(
         )
         for i, doc in enumerate(docs)
     )
+
+    print("DOCS PROMPT:", docs_prompt)
     # return {**data, "retrieved_documents": docs}
     return {"messages": [ToolMessage(content=docs_prompt, tool_call_id="")]}
 
@@ -168,6 +170,8 @@ def retriever_node(
 # ------------- NODE 05: CHAT AGENT NODE -------------
 # NODE 05: Chat Agent Node
 def chat_agent_node(state: MessagesState) -> MessagesState:
+    logger.success(state)
+
     messages = ChatPromptTemplate.from_messages(
         [chat_agent_prompt, *state["messages"]]
     )
@@ -237,3 +241,5 @@ def chat_loop() -> None:
     
     chatman.save_chat()
     chatman.remove_unlisted_chats()
+
+    # TUI DOCUMENT ADD KORSILI HALAR PO?

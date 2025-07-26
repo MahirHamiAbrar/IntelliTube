@@ -212,7 +212,7 @@ class ChatManager:
         """
         
         chats_dirpath = self.root_dir / self.chats_dir
-        chat_ids = set(chats_dirpath.iterdir())
+        chat_ids = set([path.stem for path in chats_dirpath.iterdir()])
         excluded_ids = set((excluded_ids or []) + [self.chat_id] + list(self.chatlist.keys()))
 
         for chat_id in list((chat_ids - excluded_ids) | (excluded_ids - chat_ids)):
@@ -220,7 +220,7 @@ class ChatManager:
                 logger.warning(f"Removing Unlisted Chat: {chat_id}")
                 path: Path = chats_dirpath / chat_id
                 # Failsafe: what if the path does not exist?
-                if path.exists():
+                if not path.exists():
                     logger.error(f"Chat: {chat_id} is non-existent!")
                     continue
                 shutil.rmtree(path)
