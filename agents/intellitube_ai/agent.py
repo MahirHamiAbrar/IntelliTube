@@ -53,15 +53,17 @@ def extract_and_route_query(
 ) -> Literal["load_document", "retriever"]:
     """Take the user query, fetch the URL from it and then redirect it 
     either to the document loader node or to the retriever node."""
+    logger.debug("Running router node")
 
     structured_llm = llm.with_structured_output(QueryExtractorData)
     data: QueryExtractorData = structured_llm.invoke([state['messages'][-1]])
     print(data)
 
-    if not data["url"]:
+    if data["url"]:
         return Send("load_document", {**data, **state})
     return Send("retriever", data)
 
+# ERROR: {'urlof': 'website', 'analysis': 'The user is asking a general question and has not provided enough information to determine their intent. They need to provide more context.', 'instruction': 'why?', 'url': 'null'}
 
 # ------------- NODE 02: DOCUMENT LOADER NODE -------------
 loaded_docs: dict[str, QueryExtractorData] = {}
@@ -86,6 +88,8 @@ def load_document_node(
            1. Error Loading: Return ToolMessage("Error") to Chat LLM
            2. Successful Loading: [GO TO SUMMARIZER LLM]
     """
+
+    logger.debug("Running load_document_node\n\n")
 
     # 1. ALREADY LOADED?
     if data["url"] in loaded_docs:
@@ -126,18 +130,19 @@ def load_document_node(
         skip_if_collection_exists=False,
     )
     # implement logic for redirection to summarizer llm with new state object
-    return Send("summarize_content", {**data, "documents": docs})
+    return Send("summarizer", {**data, "documents": docs})
 
 
 # ------------- NODE 03: SUMMARIZER NODE -------------
 summarizer: SummarizerAgent = None
 def summarizer_node(state: SummarizerAgentState) -> Send:
+    logger.debug("Running summarizer_node\n\n")
     global summarizer
     if not summarizer:
         summarizer = SummarizerAgent(llm=llm)
 
-    summary = summarizer.summarize(documents=state.documents)
-    state.data["summary"] = summary
+    summary = summarizer.summarize(documents=state["documents"])
+    state["summary"] = summary
     return Send("retriever", state)
 
 
@@ -150,6 +155,7 @@ retriever = vdb.vectorstore.as_retriever(
 def retriever_node(
     data: QueryExtractorData
 ) -> Dict[str, Any]:
+    logger.debug("Running retriever_node\n\n")
     docs = retriever.invoke(data["instruction"], k=3)
     # docs.append(retriever.invoke(state.query_data.rewritten_query, k=3))
 
@@ -170,6 +176,7 @@ def retriever_node(
 # ------------- NODE 05: CHAT AGENT NODE -------------
 # NODE 05: Chat Agent Node
 def chat_agent_node(state: MessagesState) -> MessagesState:
+    logger.debug("Running chat_agent_node\n\n")
     logger.success(state)
 
     messages = ChatPromptTemplate.from_messages(
@@ -234,6 +241,13 @@ def chat_loop() -> None:
         
         state = MessagesState(messages=chatman.chat_messages)
         chatman.chat_messages = agent.invoke(state)["messages"]
+
+        # for update, messages in agent.stream(input=state, stream_mode=['updates', 'messages']):
+        #     # print(updates.keys())
+        #     # logger.success(update.keys())
+        #     logger.success(update)
+        #     # print(update)
+        #     logger.info(messages)
         
         ai_msg: AIMessage = chatman.chat_messages[-1]
         ai_msg.pretty_print()
@@ -241,5 +255,3 @@ def chat_loop() -> None:
     
     chatman.save_chat()
     chatman.remove_unlisted_chats()
-
-    # TUI DOCUMENT ADD KORSILI HALAR PO?
