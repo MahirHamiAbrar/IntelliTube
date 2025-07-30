@@ -15,7 +15,7 @@ class QueryExtractorData(TypedDict):
     url: Annotated[Optional[str], ..., (
         "The URL or local path provided by the user, if any."
         "Should be extracted separately from the user-query."
-        "If there is no URL or file path, leave this as null (do not fabricate one).\n"
+        "If there is no URL or file path, leave this empty (do nothing) and do not fabricate one.\n"
         "Example: 'https://example.com/page', 'C:/Documents/myfile.txt', './notes.md'"
     )] = None
 
@@ -25,7 +25,7 @@ class QueryExtractorData(TypedDict):
         "- 'youtube_video': if it's a YouTube video link\n"
         "- 'website': for general websites or web pages\n"
         "- 'document': for file paths (like .txt, .pdf, .md, etc.)\n"
-        "If no URL/path is provided, this should be null."
+        "If no URL/path is provided, this should be empty (do nothing)."
     )] = None
 
 

@@ -28,10 +28,10 @@ If the answer is not found in the context, you must say:
 
 Do not make up facts or go beyond what is stated in the documents. Do not reference the documents themselves (e.g., "According to the document...").
 
+Here is the context from the documents:
+{docs}
 """
 
-# Here is the context from the documents:
-# {docs}
 
 multi_query_prompt = SystemMessagePromptTemplate.from_template(
     _multi_query_prompt_template, input_variables=["summary"]
@@ -39,7 +39,7 @@ multi_query_prompt = SystemMessagePromptTemplate.from_template(
 """Prompt for generating multi-querys & rewritten query"""
 
 chat_agent_prompt = SystemMessagePromptTemplate.from_template(
-    # _chat_agent_prompt_template, input_variables=["docs"]
-    _chat_agent_prompt_template
+    _chat_agent_prompt_template, input_variables=["docs"]
+    # _chat_agent_prompt_template
 )
 """Prompt for chat agent to generate response from retrieved documents"""

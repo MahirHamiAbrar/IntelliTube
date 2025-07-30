@@ -61,6 +61,7 @@ def extract_and_route_query(
 
     if data["url"]:
         return Send("load_document", {**data, **state})
+    logger.warning('Going to retriever...')
     return Send("retriever", data)
 
 # ERROR: {'urlof': 'website', 'analysis': 'The user is asking a general question and has not provided enough information to determine their intent. They need to provide more context.', 'instruction': 'why?', 'url': 'null'}
@@ -93,6 +94,7 @@ def load_document_node(
 
     # 1. ALREADY LOADED?
     if data["url"] in loaded_docs:
+        logger.warning("Sending data->url")
         # update the state and redirect to the retriever node
         return Send("retrieve_documents", data)
 
@@ -129,6 +131,7 @@ def load_document_node(
         },
         skip_if_collection_exists=False,
     )
+    logger.warning("Sending to summarizer")
     # implement logic for redirection to summarizer llm with new state object
     return Send("summarizer", {**data, "documents": docs})
 
@@ -141,8 +144,8 @@ def summarizer_node(state: SummarizerAgentState) -> Send:
     if not summarizer:
         summarizer = SummarizerAgent(llm=llm)
 
-    summary = summarizer.summarize(documents=state["documents"])
-    state["summary"] = summary
+    # summary = summarizer.summarize(documents=state["documents"])
+    # state["summary"] = summary
     return Send("retriever", state)
 
 
@@ -168,9 +171,9 @@ def retriever_node(
         for i, doc in enumerate(docs)
     )
 
-    print("DOCS PROMPT:", docs_prompt)
-    # return {**data, "retrieved_documents": docs}
-    return {"messages": [ToolMessage(content=docs_prompt, tool_call_id="")]}
+    # print("DOCS PROMPT:", docs_prompt)
+    return {**data, "retrieved_documents": docs}
+    # return {"messages": [ToolMessage(content=docs_prompt, tool_call_id="")]}
 
 
 # ------------- NODE 05: CHAT AGENT NODE -------------
@@ -182,11 +185,12 @@ def chat_agent_node(state: MessagesState) -> MessagesState:
     messages = ChatPromptTemplate.from_messages(
         [chat_agent_prompt, *state["messages"]]
     )
-    # docs = "\n\n".join(
-    #     f"Document {i + 1}:\n" + doc.page_content 
-    #     for i, doc in enumerate(state.retrieved_docs)
-    # )
-    ai_msg: AIMessage = llm.invoke(messages.format_messages())
+    docs = "\n\n".join(
+        f"Document {i + 1}:\n" + doc.page_content 
+        for i, doc in enumerate(state["retrieved_docs"])
+    )
+    # ai_msg: AIMessage = llm.invoke(messages.format_messages())
+    ai_msg: AIMessage = llm.invoke(messages.format_messages(docs=docs))
     return {"messages": [ai_msg]}
 
 
